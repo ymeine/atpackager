@@ -19,7 +19,7 @@
 As the package's name stands, here is a set of helpers for UglifyJs. They aim at simplifying the use of features provided by the latter.
 
 
-
+----
 
 
 # Convert an AST to a string
@@ -187,9 +187,9 @@ equivalent = {
 ## Parameters
 
 1. `wrapper`
-	* interface: ?
+	* interface: `String`
 	* __required__
-	* ?
+	* Source code used to wrap the given statements.
 1. `statements`
 	* interface: `UglifyJS.AST_Node` or `Array`
 	* __required__
@@ -197,4 +197,4 @@ equivalent = {
 
 ## Description
 
-
+???

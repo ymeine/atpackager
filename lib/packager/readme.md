@@ -2,9 +2,11 @@
 
 * [`readme.md`](./readme.md): this current documentation file
 
-* [`outputFile.js`](./outputFile.js): class [`OutputFile`](#output-file)
-* [`packaging.js`](./packaging.js): class [`Packaging`](#packaging)
-* [`sourceFile.js`](./sourceFile.js): class [`SourceFile`](#source-file)
+Classes:
+
+* [`outputFile.js`](./outputFile.js): [`OutputFile`](#output-file)
+* [`packaging.js`](./packaging.js): [`Packaging`](#packaging)
+* [`sourceFile.js`](./sourceFile.js): [`SourceFile`](#source-file)
 
 
 
@@ -19,7 +21,13 @@
 
 * Name: `OutputFile`
 
-Represents how an output file must be built. The three general things are fulfilled: input, output and context, respectively with a list of source files, a wanted output path, and the containing packaging.
+Represents how an output file must be built.
+
+Generic information is used for that:
+
+* input: a list of source files
+* output: a wanted output path
+* context: the containing packaging.
 
 
 
@@ -116,8 +124,93 @@ _None_
 
 Represents a packaging, with a set of source files and destination file.
 
-## Constructor parameters
+## Instance properties
 
+* `sourceDirectories`
+	* interface: `Array`
+	* default: `[]`
+	* rights: access
+	* Directories where logical paths are looked for.
+* `sourceFiles`
+	* interface: Map
+	* default: `{}`
+	* rights: access
+	* Map with information about each source file. The key in the map is the logical path of the file.
+* `outputDirectory`
+	* interface: `String`
+	* default: `"."`
+	* rights: access
+	* Directory in which packages are written.
+* `outputFiles`
+	* interface: Map
+	* default: `{}`
+	* rights: access
+	* Map with information about each output file. The key in the map is the name of the output file, relative to outputDirectory.
+* `outputFilesQueue`
+	* interface: `Array`
+	* deault: `[]`
+	* rights: access
+	* Queue of output files to be built. Files will be built in this order. Already built files are not in this queue any more.
+* `visitors`
+	* interface: `Array` of Visitor
+	* default: `[]`
+	* rights:
+	*
+* `defaultBuilder`
+	* interface: Builder
+	* default: `null`
+	* rights: access
+	* Default builder.
+
+## Prototype methods
+
+### Call visitors
+
+* Name: `call`
+
+Calls the given method - if defined - on all `this.visitors` with the given parameters.
+
+#### Parameters
+
+1. `method`
+	* interface: `String`
+	* __required__
+	* __in__
+	* The name of the method to call.
+1. `args`
+	* interface: `Array`
+	* __required__
+	* __in__
+	* The (partial) list of arguments to pass to the method.
+
+#### Description
+
+Note that an additional argument is prepended before the call: a reference to this packaging instance.
+
+
+
+### Expand logical paths ??
+
+* Name: `expandLogicalPaths`
+
+Expands the given patterns of logical paths, using `this.sourceDirectories` to find them.
+
+#### Parameters
+
+1. `patterns`
+	* interface: `String`
+	* __required__
+	* __in__
+	* Patterns to be expanded.
+1. `onlyAlreadyAdded`
+	* interface: `Boolean`
+	* default: falsy
+	* __in__
+	* If truthy, only use already added source files.
+
+#### Return value
+
+The result.
 
 
 
