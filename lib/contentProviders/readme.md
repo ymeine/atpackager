@@ -16,7 +16,7 @@ The content providers defined here are classes directly set on modules' `exports
 
 As its name stands, a content provider is something that is able to retrieve the content of a given object.
 
-In our case, content providers deal with Source file objects, and with binary and text content.
+In our case, content providers deal with Source File objects, and with binary and text content.
 
 # Interface of a content provider
 
@@ -204,6 +204,60 @@ This content provider stores its content in a property called `contentATCompiled
 	* The path of the file, overriding the one present in the latter if specified.
 
 #### Description
+
+Compiles the given or retrieved text content - which should correspond to an Atlas template - into a JavaScript class.
+
+Since there are multiple types of templates, it must use the proper compiler for the given content. It uses the prototype method `getClassGeneratorFromLogicalPath` to retrieve the name of the proper compiler class.
+
+The result is stored as content (see content type).
+
+Note that this method considers it has already been called before (or its job has been done) if the content of the file looks like a compiled template already: if the content begins with an arbitrary number of spaces, followed by the text `Aria.classDefinition`. In this case, it aborts its execution.
+
+
+
+### Get the name of the class generator for a given template
+
+* Name: `getClassGeneratorFromLogicalPath`
+
+#### Parameters
+
+1. `logicalPath`
+	* interface: `String`
+	* __required__
+	* __in__
+	* The path of the file corresponding to the template to compile (the relevant part is actually the extension)
+
+#### Description
+
+The method returns the the classpath of the class to use to compile a template under the given path. The actual relevant information for that is the type of the template, and to guess it at best it uses the extension of the name of the template.
+
+The extension is the part of the (base) name of the file (so folders excluded) after the first encountered dot (`.`).
+
+Here is the list of classpaths per extension:
+
+* `tpl`: `aria.templates.TplClassGenerator`
+* `tpl.css`: `aria.templates.CSSClassGenerator`
+* `tml`: `aria.templates.TmlClassGenerator`
+* `tpl.txt`: `aria.templates.TxtClassGenerator`
+* `cml`: `aria.templates.CmlClassGenerator`
+
+#### Return value
+
+* interface: `String`
+
+Returns the classpath of the class to use to compile the template, or `null` if not found.
+
+
+
+### Get the content
+
+* Name: `getCompiledTemplate`
+* Parameters: see prototype method `compile`
+* Return value: see content type
+
+Returns the content of the file as the prototype method `getTextContent` would do, however if the latter doesn't exist yet it calls the prototype method `compile` to compute it (forwarding all arguments), before eventually returning it.
+
+
 
 
 
