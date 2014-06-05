@@ -1,6 +1,10 @@
+Builders.
+
 # File system layout
 
 * [`readme.md`](./readme.md): this current documentation file
+
+Builders:
 
 * [`ATMultipart.js`](./ATMultipart.js)
 * [`Concat.js`](./Concat.js)
@@ -8,16 +12,36 @@
 * [`JSConcat.js`](./JSConcat.js):
 
 
+# Introduction: what is a builder?
+
+A builder is in charge to create the content of an output file (normally using its source files), store it, and write it on the disk.
 
 
 
-# Model
+# The builder interface
 
-## Builder
+## Constructor
 
-A builder is a class.
+### Parameters
 
-Its constructor receives a configuration object.
+1. `cfg`
+	* interface: any, but usually an `Object`
+	* default: `undefined`
+	* A unique parameter to configure the builder.
+
+## Public methods
+
+### Build
+
+* Name: `build`
+
+Main entry point of the builder to actually write the given output file.
+
+## Protected methods
+
+They can be reimplemented to change the behavior of the build method, which relies on them.
+
+### ...
 
 
 
