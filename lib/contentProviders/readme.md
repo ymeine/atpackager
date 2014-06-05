@@ -4,13 +4,16 @@ Content providers.
 # File system layout
 
 * [`readme.md`](./readme.md): this current documentation file
-* [`binaryContent.js`](./binaryContent.js): [Binary content](#binary-content) provider
-* [`textContent.js`](./textContent.js): [Text content](#text-content) provider
-* [`fileLoader.js`](./fileLoader.js): [File loader](#file-loader) content provider
-* [`ATCompiledTemplate.js`](./ATCompiledTemplate.js): [Aria Templates compiled templates](#aria-templates-compiled-templates) content provider
-* [`uglifyJS.js`](./uglifyJS.js): [UglifyJS](#uglifyjs) content provider
 
-The content providers defined here are classes directly set on modules' `exports` property.
+Content providers:
+
+* [`binaryContent.js`](./binaryContent.js): [Binary content](#binary-content)
+* [`textContent.js`](./textContent.js): [Text content](#text-content)
+* [`fileLoader.js`](./fileLoader.js): [File loader](#file-loader)
+* [`ATCompiledTemplate.js`](./ATCompiledTemplate.js): [Aria Templates compiled templates](#aria-templates-compiled-templates)
+* [`uglifyJS.js`](./uglifyJS.js): [UglifyJS](#uglifyjs)
+
+The content providers defined here are classes (technically the constructor functions) directly set on modules' `exports` property.
 
 # Introduction: what is a content provider?
 
