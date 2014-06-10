@@ -14,11 +14,11 @@ Builders:
 
 # Introduction: what is a builder?
 
-A builder is in charge to create the content of an output file (normally using its source files), store it, and write it on the disk.
+A builder is in charge to create the content of an output file (normally using its source files), store it in memory, and write it on the storage device.
 
 
 
-# The builder interface
+# Interface of a builder
 
 ## Constructor
 

@@ -1,6 +1,5 @@
 Content providers.
 
-
 # File system layout
 
 * [`readme.md`](./readme.md): this current documentation file
