@@ -9,19 +9,19 @@ Visitors:
 * [`ATCompileTemplates.js`](./ATCompileTemplates.js): Compile AT templates
 * [`ATDependencies.js`](./ATDependencies.js): Compute AT dependencies
 * [`ATNormalizeSkin.js`](./ATNormalizeSkin.js): Normalize Skin
-* [`ATRemoveDoc.js`](./ATRemoveDoc.js): remove AT documentation content
-* [`ATUrlMap.js`](./ATUrlMap.js): AT URL Map
-* [`CheckDependencies.js`](./CheckDependencies.js): Check dependencies
-* [`CheckGlobals.js`](./CheckGlobals.js): Check global variables
-* [`CheckPackaged.js`](./CheckPackaged.js): Check packaged
-* [`CopyUnpackaged.js`](./CopyUnpackaged.js): Copy unpackaged
-* [`Hash.js`](./Hash.js):
-* [`ImportSourceFile.js`](./ImportSourceFile.js):
-* [`ImportSourceFiles.js`](./ImportSourceFiles.js):
-* [`JSMinify.js`](./JSMinify.js):
-* [`JSStripBanner.js`](./JSStripBanner.js):
-* [`Map.js`](./Map.js):
-* [`TextReplace.js`](./TextReplace.js):
+* [`ATRemoveDoc.js`](./ATRemoveDoc.js): Remove AT documentation content
+* [`ATUrlMap.js`](./ATUrlMap.js): [AT URL Map](#at-url-map)
+* [`CheckDependencies.js`](./CheckDependencies.js): [Check/add dependencies](#check-add-dependencies)
+* [`CheckGlobals.js`](./CheckGlobals.js): [Check global variables use](#check-global-variables-use)
+* [`CheckPackaged.js`](./CheckPackaged.js): [Check that all files have been packaged](#check-that-all-files-have-been-packaged)
+* [`CopyUnpackaged.js`](./CopyUnpackaged.js): [Copy unpackaged (left) files](#copy-an-unpackaged-file)
+* [`Hash.js`](./Hash.js): [Append Hash to output file name](#hash)
+* [`ImportSourceFile.js`](./ImportSourceFile.js): [Import a source file](#import-source-files)
+* [`ImportSourceFiles.js`](./ImportSourceFiles.js): [Import a set of source files](#import-source-files)
+* [`JSMinify.js`](./JSMinify.js): [Minify JavaScript files](#minify-a-javascript-file)
+* [`JSStripBanner.js`](./JSStripBanner.js): [Remove comment banners in JavaScript files](#remove-js-banner)
+* [`Map.js`](./Map.js): [](#map)
+* [`TextReplace.js`](./TextReplace.js): [Replace text in files](#replace-text)
 
 
 
@@ -32,6 +32,34 @@ Visitors:
 A visitor is a kind of hook, which implements some specific methods.
 
 Visitors can be instantiated with a specific configuration, and then added to a packaging. Afterwards, the packaging will call the specific methods on all its visitors at different steps of its process.
+
+It implements the concept of _events_:
+
+* events names are implemented methods' names
+* adding a visitor is like registering to an event, with implemented methods indicating which events are subscribed
+* calling all visitors with a specific method is like emitting the corresponding event
+
+
+
+
+# Some concepts
+
+_Before going further into details, here are a few concepts to know, in order to understand some features, and also to avoid repeating things in the documentation, making it less digestible._
+
+All visitors expect a configuration object as the unique argument of their constructors; they are described in this documentation for each specific visitors. There are several things to say, at least __concerning built-in visitors__ (those described here).
+
+First, the configuration object is not altered, its properties are simply used.
+
+Then, most of visitors accept one or more patterns to filter files that they should process. This uses the concept of glob patterns, which are used with the method `isMatch` of `Source File` or `Ouput File` (depending on the actual type of received file), which anyway works the same in both cases.
+
+Visitors processing single files will not do anything with a file that doesn't match the specified pattern. If no pattern was given, the usual default one is chosen so that it takes into account all files (`*/**`), or all files that are relevant (for instance, for visitors processing JavaScript files, the default pattern will filter extension, keeping `.js` ones).
+
+Therefore, unless specified otherwise, the above applies for configuration objects.
+
+
+
+
+
 
 
 
@@ -79,7 +107,7 @@ You can use it to alter its content before it is written.
 	* __in & out__
 	* The output file (partly) built from the input file.
 1. `inputFile`
-	* interface: `Input File`
+	* interface: `Source File`
 	* __required__
 	* __in & out__
 	* The input file about to be written.
@@ -201,6 +229,26 @@ Called just before an output file is going to be built.
 
 
 
+### When computing the dependencies
+
+* Name: `computeDependencies`
+
+Called to compute the dependencies of an input file. It should add the found dependencies to the given packaging.
+
+#### Parameters
+
+1. `packaging`
+	* interface: `Packaging`
+	* __required__
+	* __in & out__
+	* The packaging containing the input file.
+1. `inputFile`
+	* interface: `Source File`
+	* __required__
+	* __in & out__
+	* The input file to process.
+
+
 
 
 ----
@@ -217,15 +265,17 @@ Specific visitors
 
 ## Configuration
 
+### File filtering
+
 * `files`
-	* interface: as expected by the prototype method `isMatch` of `Input File`
-	* default: `['**/*']` (all files)
-	* __in__
+	* default: `['**/*']`
 	* A set of patterns to filter the files to be processed.
+
+### Replacement configuration
+
 * `replacements`
 	* interface: `Array` of `Object` (see below for details about the replacement object)
 	* default: `[]` (no replacement)
-	* __in__
 	* A list of replacements to be done.
 
 The replacement object:
@@ -233,12 +283,10 @@ The replacement object:
 * `find`
 	* interface: `String`
 	* __required__
-	* __in__
 	* The pattern to find in the text and replace.
 * `replace`
 	* interface: `String`
 	* __required__
-	* __in__
 	* The replacement text.
 
 ## Implemented methods
@@ -268,30 +316,28 @@ The keys of the map are path to input files of the packaging, while values are t
 
 ## Configuration
 
+### Files filtering
+
 * `sourceFiles`
-	* interface: as expected by the prototype method `isMatch` of `Input File`
-	* default: `['**/*']` (all files)
-	* __in__
+	* default: `['**/*']`
 	* Source files to take into account in the map.
 * `outputFiles`
-	* interface: as expected by the prototype method `isMatch` of `Input File`
-	* default: `['**/*']` (all files)
-	* __in__
+	* default: `['**/*']`
 	* Output files to take into account in the map.
+
+### Map file configuration
+
 * `mapFile`
 	* interface: `String`
 	* default: `'map.js'`
-	* __in__
 	* The output name of the map file.
-* `mapFile`
+* `mapFileEncoding`
 	* interface: `String`
 	* default: [`null`](http://devdocs.io/javascript/global_objects/null)
-	* __in__
 	* The encoding of the map file.
 * `outputDirectory`
 	* interface: `String`
 	* default: [`null`](http://devdocs.io/javascript/global_objects/null) (uses the global directory instead)
-	* __in__
 	* The output directory of the map file.
 
 ## Implemented methods
@@ -306,29 +352,30 @@ The keys of the map are path to input files of the packaging, while values are t
 
 ## Configuration
 
+### File filtering
+
+* `files`
+	* default: `['**/*']`
+	* A set of patterns to filter the files to be processed.
+
+### Hash configuration
+
 * `hash`
 	* interface: `String` or as expected by Node.js module [`crypto`](http://devdocs.io/node/crypto)
 	* default: `md5`
-	* __in__
 	* The hash method to use (see below for more information about the possible ones).
 * `pattern`
 	* interface: `String`
 	* default: `"[name]-[hash][extension]"`
-	* __in__
 	* The new output file pattern (see below for more information about its format).
-* `files`
-	* interface: as expected by the prototype method `isMatch` of `Output File`
-	* default: `['**/*']` (all files)
-	* __in__
-	* A set of patterns to filter the files to be processed.
 
-### The hash methods
+#### The hash methods
 
 The standard Node.js module [`crypto`](http://devdocs.io/node/crypto) is used to compute the hash, therefore the value of the property `hash` can be anything that it accepts.
 
 However, an additional hash method is supported: `"murmur3"`. For that, it uses the npm package [`murmurhash-js`](https://github.com/garycourt/murmurhash-js).
 
-### The pattern format
+#### The pattern format
 
 The pattern defines the new basename of the file (which means, its whole folder path apart).
 
@@ -366,20 +413,21 @@ In both cases, the content of the file is given as is to compute the hash. This 
 
 ## Configuration
 
+### Files filtering
+
 * `files`
-	* interface: as expected by the prototype method `isMatch` of `Input File`
 	* default: `['**/*.js']` (all JavaScript files)
-	* __in__
 	* A set of patterns to filter the files to be processed.
+
+### Banners types
+
 * `line`
 	* interface: `Boolean`
 	* default: falsy
-	* __in__
 	* Whether single line comments should be removed as well.
 * `block`
 	* interface: `Boolean`
 	* default: falsy
-	* __in__
 	* Whether all block comments should be removed unconditionally, or block comments with a specific syntax should be preserved.
 
 ## Implemented methods
@@ -406,40 +454,35 @@ You can see that anyway one type of block comments will be removed.
 
 ## Configuration
 
+### Files filtering
+
 * `files`
-	* interface: as expected by the prototype method `isMatch` of `Input File` or `Output File`
 	* default: `['**/*.js']` (all JavaScript files)
-	* __in__
 	* A set of patterns to filter the files to be processed.
 * `outputFiles`
-	* interface: as expected by the prototype method `isMatch` of `Output File`
-	* default: `['**/*']` (all files)
-	* __in__
+	* default: `['**/*']`
 	* Output files to take into account.
 * `inputFiles`
-	* interface: as expected by the prototype method `isMatch` of `Input File`
-	* default: `['**/*']` (all files)
-	* __in__
+	* default: `['**/*']`
 	* Input files to take into account.
+
+### Minification configuration
+
 * `skipJSConcatParts`
 	* interface: `Boolean`
 	* default: `true`
-	* __in__
 	* If truthy, will not process input files part of an output file built with the built-in builder `JSConcat`. Useful since this doesn't make much sense to minify each single part, but rather the resulting output file as whole.
 * `compress`
 	* interface: if the value `false` is not given, as expected by `UglifyJS.Compressor`
 	* default: `undefined`, and if value is different from `false` but still falsy, an empty object `{}`
-	* __in__
 	* The UglifyJS compressor configuration, used to compress the AST.
 * `mangle`
 	* interface: if the value `false` is not given, as expected by UglifyJS AST method `mangle_names`
 	* default: `undefined`, and if value is different from `false` but still falsy, an empty object `{}`
-	* __in__
 	* The name mangling configuration.
 * `output`
 	* interface: as expected by the second argument of the `uglifyHelpers`'s `astToString` helper
 	* default (if value is falsy): `{ascii_only: true}`
-	* __in__
 	* The output options to be used for the AST.
 
 ## Implemented methods
@@ -489,20 +532,22 @@ Adds source files to the packaging, regarding the given configuration.
 
 ## Configuration
 
+### Files filtering
+
 * `sourceFiles`
 	* interface: as expected by the method [`grunt.file.expand`](http://gruntjs.com/api/grunt.file#grunt.file.expand)'s `patterns` parameter
-	* default: `['**/*']` (all files)
-	* __in__
+	* default: `['**/*']`
 	* A set of patterns to filter the files to be imported.
+
+### Import configuration
+
 * `sourceDirectory`
 	* interface: `String`
 	* default: `""` (empty)
-	* __in__
 	* The directory from which to import the files.
 * `targetBaseLogicalPath`
 	* interface: `String`
 	* default: `""` (empty)
-	* __in__
 	* The directory path to set for the input files (purely logical, not the actual one on the storage device).
 
 ## Implemented methods
@@ -526,12 +571,10 @@ Adds a source file to the packaging, regarding the given configuration.
 * `sourceFile`
 	* interface: `String`
 	* __required__
-	* __in__
 	* The path of the file to import.
 * `targetBaseLogicalPath`
 	* interface: `String`
 	* __required__
-	* __in__
 	* The directory path to set for the input file (purely logical, not the actual one on the storage device).
 
 ## Implemented methods
@@ -556,20 +599,22 @@ Copy files present in the packaging but not used to build any output file.
 
 ## Configuration
 
+### Files filtering
+
 * `files`
 	* interface: as expected by the prototype method `isMatch` of `Source File`
-	* default: `['**/*']` (all files)
-	* __in__
+	* default: `['**/*']`
 	* A set of patterns to filter the files to be copied.
+
+### Copy configuration
+
 * `builder`
 	* interface: a builder configuration
 	* default: `{type: 'Copy'}` (the builder `Copy` without specific configuration)
-	* __in__
 	* The builder configuration used to retrieved a builder to use to copy the files.
 * `renameFunction`
 	* interface: `Function`
 	* default: the identity function (it returns its first given argument, as is)
-	* __in__
 	* A function used to rename the copied file.
 
 
@@ -595,10 +640,11 @@ Checks that no file present as source file of the packaging was left unprocessed
 
 ## Configuration
 
+### Files filtering
+
 * `files`
 	* interface: as expected by the prototype method `isMatch` of `Source File`
-	* default: `['**/*']` (all files)
-	* __in__
+	* default: `['**/*']`
 	* A set of patterns to filter the files to be checked.
 
 ## Implemented methods
@@ -620,17 +666,14 @@ Will log an error with grunt (`grunt.log.error`) for each source file contained 
 ### Files filtering
 
 * `files`
-	* interface: as expected by the prototype method `isMatch` of `Input File` or `Output File`
 	* default: `['**/*.js']` (all JavaScript files)
-	* __in__
 	* A set of patterns to filter the files to be processed.
 
-### Globals settings
+### Globals configuration
 
 * `strict`
 	* interface: `Boolean`
 	* default:
-	* __in__
 	* Whether to use strict checking or not. In strict mode, a global must be explicitly allowed to be considered as accepted, while otherwise it must only not be forbidden.
 
 Globals permissions:
@@ -638,22 +681,18 @@ Globals permissions:
 1. `allowStdJSGlobals`
 	* interface: value `false` or anything else
 	* default: `undefined` (truthy in this context)
-	* __in__
 	* Whether to allow standard JavaScript globals or not (see below for a list).
 1. `allowCommonJSGlobals`
 	* interface: `Boolean`
 	* default: falsy
-	* __in__
 	* Whether to allow global defined by CommonJS or not (see below for a list).
 1. `allowedGlobals`
 	* interface: `Array` of `String`
 	* default: `undefined`
-	* __in__
 	* If specified, the globals listed here are set as being allowed.
 1. `forbiddenGlobals`
 	* interface: `Array` of `String`
 	* default: `undefined`
-	* __in__
 	* If specified, the globals listed here are set as being forbidden.
 
 The list above is ordered, since all these properties are processed in this order, with any of the possible override. So for instance listed forbidden globals have precedence over allowed one.
@@ -702,7 +741,7 @@ Everytime a forbidden global is used in one of those files, an error will be log
 
 
 
-# Check dependencies
+# Check/Add dependencies
 
 * Name: `CheckDependencies`
 
@@ -713,9 +752,7 @@ Check the dependencies on output files, and add corresponding missing source fil
 ### Files filtering
 
 * `files`
-	* interface: as expected by the prototype method `isMatch` of `Input File` or `Output File`
 	* default: `['**/*.js']` (all JavaScript files)
-	* __in__
 	* A set of patterns to filter the files to be processed.
 
 ### Dependencies check
@@ -723,17 +760,14 @@ Check the dependencies on output files, and add corresponding missing source fil
 * `noCircularDependencies`
 	* interface: `Boolean`
 	* default: `true`
-	* __in__
 	* Whether to allow [circular dependencies](https://en.wikipedia.org/wiki/Circular_dependency) or not.
 * `addUnpackagedDependencies`
 	* interface: `Boolean`
 	* default: `true`
-	* __in__
 	* Whether to add missing dependencies instead of just checking for their presence.
 * `unpackagedDependenciesError`
 	* interface: `Boolean`
 	* default: `true`
-	* __in__
 	* If unpackaged dependencies are not added (`addUnpackagedDependencies` is falsy), whether to log an error in case of missing dependency or not.
 
 ### Ordering
@@ -741,12 +775,10 @@ Check the dependencies on output files, and add corresponding missing source fil
 * `checkPackagesOrder`
 	* interface: `Boolean`
 	* default: `true`
-	* __in__
 	* Whether dependencies should be included by the main build before or during the build of this output file. indeed, in some cases some will be included after, as dependencies of other output files.
 * `reorderFiles`
 	* interface: `Boolean`
 	* default: `true`
-	* __in__
 	* Controls the order of source files contained by the output file: whether to keep the order in which source files have been encountered while processing dependencies, or to let the latter at the end of the list, as they were appended.
 
 
@@ -755,4 +787,181 @@ Check the dependencies on output files, and add corresponding missing source fil
 ### `onBeforeOutputFileBuild`
 
 Anytime a circular dependency is found, an error is logged (using `grunt.log.error`), specifying the list of concerned dependencies, and the current dependency processing is stopped.
+
+
+
+
+
+# AT URL Map
+
+* Name: `ATUrlMap`
+
+## Configuration
+
+### Files filtering
+
+* `sourceFiles`
+	* default: `['**/*']`
+	* Source files to take into account in the map.
+* `outputFiles`
+	* default: `['**/*']`
+	* Output files to take into account in the map.
+
+
+
+
+
+# Remove Aria Templates documentation data
+
+* Name: `ATRemoveDoc`
+
+Removes documentation data, with impact on runtime and/or package's size.
+
+## Configuration
+
+### Files filtering
+
+* `files`
+	* default: `['**/*.js']` (all JavaScript files)
+	* A set of patterns to filter the files to be processed.
+
+### Elements to remove
+
+* `removeBeanDescription`
+	* interface: `Boolean`
+	* default: `true`
+	* Remove the description of properties in Bean definitions
+* `removeEventDescription`
+	* interface: `Boolean`
+	* default: `true`
+	* Remove the description of events in Aria object definitions
+* `removeErrorStrings`
+	* interface: `Boolean`
+	* default: `false`
+	* Remove the error strings. __See description for details__.
+* `replaceStaticsInErrors`
+	* interface: `Boolean`
+	* default: `false`
+	*  __See description for details__.
+
+## Implemented methods
+
+### `onWriteInputFile
+
+Removes the selected documentation content from the given input file.
+
+If something actually changed (something was removed), the content provider of the file is set to `uglifyContentProvider`.
+
+To remove the content, it uses the utility [`ATRemoveDoc`](../ATRemoveDoc.js). However, here is a description below.
+
+Errors strings are removed from:
+
+* `$statics`
+* in function calls:
+	* `$logError`
+	* `$logWarn`
+	* `$logInfo`
+	* `_logError`
+
+
+
+
+
+# Normalize Aria Templates skin
+
+* Name: `ATNormalizeSkin`
+
+Normalizes Aria Templates skin definitions.
+
+## Configuration
+
+### Files filtering
+
+* `files`
+	* default: `['**/*.js']` (all JavaScript files)
+	* A set of patterns to filter the files to be processed.
+
+### Normalization options
+
+* `jsonIndent`
+	* interface: `String`
+	* default: `    ` (4 spaces)
+	* The indentation string to use.
+* `strict`
+	* interface: `Boolean`
+	* default: falsy
+	* Whether to log actual error messages if there are errors, or to simply log warnings.
+
+## Implemented methods
+
+### `onWriteInputFile`
+
+First note that in addition to the given `files` filter, files who don't define an Aria class with a classpath corresponding to the skin (`aria.widgets.AriaSkin`) will be skipped as well.
+
+Then, it normalizes the skin definition using `aria.widgets.AriaSkinNormalization.normalizeSkin`, replacing the content of the file if done with success, logging an error otherwise.
+
+
+
+
+
+# Aria Templates dependencies
+
+* Name: `ATDependencies`
+
+Computes the dependencies of the given input file, and adds them to the latter.
+
+## Configuration
+
+### Files filtering
+
+* `files`
+	* default: `['**/*']`
+	* A set of patterns to filter the files to be processed.
+
+### Options
+
+* `mustExist`
+	* interface: `Boolean`
+	* default: `true`
+	* Whether to be strict or not when finding dependencies: if truthy, determined dependencies must be found in the packaging.
+* `externalDependencies`
+	* interface: `Array` of `String`
+	* default: `[]`
+	* List of paths of dependencies to consider as external, and therefore which do not have to be inside the packaging.
+
+## Implemented methods
+
+### `computeDependencies`
+
+Dependencies of the given input file are computed, and then actually specified as being dependencies of the file.
+
+Note that dependencies must be part of the packaging already, either already added to it or present in its source directory.
+
+If a dependency could not be found, is not part of the specified `externalDependencies` and if `mustExist` is truthy, an error is logged.
+
+
+
+
+
+# Compile Aria Templates templates
+
+* Name: `ATCompileTemplates`
+
+Compiles Aria Templates templates.
+
+## Configuration
+
+### Files filtering
+
+* `files`
+	* default: `['**/*']`
+	* A set of patterns to filter the files to be processed.
+
+## Implemented methods
+
+### `onWriteInputFile`
+
+In addition to the given `files` filter, if the file does not correspond to an actual template (we determine it if we can't find an associated parser), the file won't be processed.
+
+It uses the content provider `ATCompiledTemplate` to compile the template and store the associated content, and also sets it as the default content provider of the file, so that this is the content that would be fetched.
 
