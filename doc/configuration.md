@@ -1,6 +1,6 @@
 # Recap
 
-AT Packager is built as a Grunt plugin and therefore expects it configuration to be passed using `grunt.initConfig` in the `Gruntfile.js` file.
+AT Packager is built as a Grunt plugin and therefore expects it configuration to be passed using [`grunt.initConfig`](http://gruntjs.com/api/grunt.config#grunt.config.init) in the `Gruntfile.js` file.
 
 Here is an example of such a file:
 
@@ -31,6 +31,8 @@ module.exports = function (grunt) {
 };
 ```
 
+The rest of this documentation mainly discusses the actual configuration of AT Packager, that is the `options` object you can see in the snippet of code.
+
 
 
 
@@ -42,7 +44,7 @@ module.exports = function (grunt) {
 This is the equivalent of the _current working directory_, but for Grunt.
 
 ```javascript
-grunt.file.setBase("...")
+grunt.file.setBase("...");
 ```
 
 Replace `...` with the actual path to the root of the project.
@@ -50,7 +52,7 @@ Replace `...` with the actual path to the root of the project.
 ## Load AT Packager tasks
 
 ```javascript
-grunt.loadTasks(".../atpackager/tasks")
+grunt.loadTasks(".../atpackager/tasks");
 ```
 
 Replace `...` with the actual path to the `atpackager` module.
@@ -60,46 +62,69 @@ Replace `...` with the actual path to the `atpackager` module.
 
 # AT Packager specific configuration
 
-(to be put inside the `grunt.initConfig` method as shown is sample above)
-
 Note that since it is a Grunt plugin, AT Packager uses a lot of the latter's features. Notably regarding paths for files and folders specifications: [globs](https://github.com/isaacs/node-glob) are accepted.
+
+Note also the following terms and concepts used in this article:
+
+* a _packaging_ is what is built by the packager from the configuration object
+* the _packager_ is what builds the packaging
+* a _package_ is the equivalent of an output file: a packaging is made of a set of them, as mentioned in [introduction](./user.html#the-at-packager-design)
+* a _logical path_ is a path relative to the packaging (which can have several roots!)
 
 ## Options
 
-### Specify the input content (files and folders)
+### Input content (files and folders)
 
-Use `sourceDirectories` to specify a list of root folders on which the packager will work.
+Use `sourceDirectories` to specify the packaging's root folders' paths. It is used to search for files specified with a logical path. The root folders' paths however are either absolute or relative to the base path configured for Grunt.
 
-Then, `sourceFiles` will specify the list of files to process. They are relative from the given source directories.
+Then, you can use `sourceFiles` to populate the packaging with source files. These source files include both those used directly to build output files, and those used for other purposes (direct copy, dependencies computation, etc.). Logical paths are expected.
 
-### Specify the output directory
+Example:
 
-The `outputDirectory` option tells the directory in which to put the final result.
+```javascript
+{
+	// ...
+	sourceDirectories: [
+		'src/main/static',
+		'...'
+	],
+	sourceFiles: [
+		'**/*.js',
+		'...'
+	]
+	// ...
+}
+```
+
+### Output directory
+
+Use the `outputDirectory` option to tell in which directory to put the built packages. This one is relative to the base path configured for Grunt.
+
+Example:
+
+```javascript
+{
+	// ...
+	outputDirectory : 'target/static'
+	// ...
+}
+```
 
 ### Packages definition
 
 Pass to the `packages` option a list of packages definitions: see [below](#package-definition) to know more about package definition.
 
-You can also specify a default builders for those packages definitions, when no explicit builder is specified there. Simply put a builder configuration  in `defaultBuilder`. Once again, see [below](#package-definition) for more information on how a builder configuration looks like.
+You can also specify a default builder for packages, for when no explicit builder is specified for a given package. Simply put a [builder](#builders) configuration  in `defaultBuilder`.
 
 ### Visitors specifications
 
-`visitors` is used to specify the list of visitors to be used.
+_Visitors are [built-in objects](#built-in-objects-definition), located in folder `visitors`_.
 
-All visitors will be applied in order to each resolved source file.
+Use `visitors` to specify the list of visitors to be used in the packaging.
 
-In this list, you can specify a visitor either is its short form - its name - or a full configuration object, of this form:
+It is important to note that visitors are called in the order in which they were specified.
 
-```
-{
-	type: "..." // The name of the visitor (as in the short form),
-	cfg: { // The configuration of the visitor
-		// ...
-	}
-}
-```
-
-Please see the [dedicated section about visitors](./visitors.html) to learn more about this concept and to know which are available.
+Please see the [dedicated section about visitors](./visitors.html) to learn more about this concept and to learn about the built-in ones.
 
 
 
@@ -107,7 +132,37 @@ Please see the [dedicated section about visitors](./visitors.html) to learn more
 
 ___TO BE DONE___
 
-* ATBootstrapFile
+`ATBootstrapFile`
+
+
+
+## Built-in objects definition
+
+Built-in objects all follow the same principle:
+
+* they have a name: in practice it corresponds to the source file name
+* they are located in a specific folder depending on their types (the folder is named after that)
+* they optionally take a configuration object
+
+Thus, there are two ways to specify the use of one of those objects:
+
+* the short form: a simple string with the name of the specific object to be used. The packager will know its type and where to look for it depending on the context where it is used.
+* the long form, whose name is put under a property `type` and whose configuration is put under a property `cfg`.
+
+Example:
+
+```javascript
+{
+	visitors: [
+		{
+			type: "...", // The name of the object
+			cfg: { // The configuration of object
+				// ...
+			}
+		}
+	]
+}
+```
 
 
 
@@ -118,21 +173,28 @@ A package is a single file resulting from a building process applied on a set of
 Therefore a package definition is made of the following properties:
 
 * `name`: the name of the resulting file
-* `builder`: the builder to use, along with its configuration, to create the output file from the input files. If not specified, the `defaultBuilder` specified in global AT Packager's configuration will be used.
-* `files`: the list of input files processed by the `builder` to create the output file with given `name`
+* `builder`: the [builder](#builders) configuration to use to create the output file from the input files. If not specified, the `defaultBuilder` specified in global AT Packager's configuration will be used.
+* `files`: the list of input files to be processed by the `builder` to create the output file with given `name`
 
-Note that this list of input files can be extended by some specific visitors if needed. For instance, for Aria Templates specific products, using the visitors `ATDependencies` and `CheckDependencies` will compute static dependencies for each file, adding them in current package definition if not already present in any other package definition.
+Note that this list of input `files` will possibly be extended by some specific visitors if needed.
 
-Now, here is how to configure a builder (it follows the same principle as for visitors):
+Example of a package definition:
 
 ```javascript
 {
-	type: "...", // The name of the builder
-	cfg: { // The configuration of the builder
+	name: "basename.ext",
+	files: [
+		"...",
+		// ...
+	],
+	builder: {
 		// ...
 	}
 }
 ```
 
+### Builders
 
-Please see the [dedicated section about builders](./builders.html) to learn more about this concept and to know which are available.
+_Builders are [built-in objects](#built-in-objects-definition), located in folder `builders`_.
+
+Please see the [dedicated section about builders](./builders.html) to learn more about this concept and to learn about the built-in ones.

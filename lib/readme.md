@@ -18,9 +18,9 @@
 
 Exported for the user:
 
-* [`builders`](./builders): a set of builders
-* [`visitors`](./visitors): a set of visitors
-* [`contentProviders`](./contentProviders): a set of content providers
+* [`builders`](./builders): built-in builders
+* [`visitors`](./visitors): built-in visitors
+* [`contentProviders`](./contentProviders): built-in content providers
 
 Internal:
 

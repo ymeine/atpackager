@@ -1,4 +1,4 @@
-Visitors.
+Built-in visitors.
 
 # File system layout
 
@@ -6,22 +6,28 @@ Visitors.
 
 Visitors:
 
-* [`ATCompileTemplates.js`](./ATCompileTemplates.js): Compile AT templates
-* [`ATDependencies.js`](./ATDependencies.js): Compute AT dependencies
-* [`ATNormalizeSkin.js`](./ATNormalizeSkin.js): Normalize Skin
-* [`ATRemoveDoc.js`](./ATRemoveDoc.js): Remove AT documentation content
-* [`ATUrlMap.js`](./ATUrlMap.js): [AT URL Map](#at-url-map)
-* [`CheckDependencies.js`](./CheckDependencies.js): [Check/add dependencies](#check-add-dependencies)
-* [`CheckGlobals.js`](./CheckGlobals.js): [Check global variables use](#check-global-variables-use)
-* [`CheckPackaged.js`](./CheckPackaged.js): [Check that all files have been packaged](#check-that-all-files-have-been-packaged)
-* [`CopyUnpackaged.js`](./CopyUnpackaged.js): [Copy unpackaged (left) files](#copy-an-unpackaged-file)
-* [`Hash.js`](./Hash.js): [Append Hash to output file name](#hash)
 * [`ImportSourceFile.js`](./ImportSourceFile.js): [Import a source file](#import-source-files)
 * [`ImportSourceFiles.js`](./ImportSourceFiles.js): [Import a set of source files](#import-source-files)
-* [`JSMinify.js`](./JSMinify.js): [Minify JavaScript files](#minify-a-javascript-file)
-* [`JSStripBanner.js`](./JSStripBanner.js): [Remove comment banners in JavaScript files](#remove-js-banner)
-* [`Map.js`](./Map.js): [](#map)
+* [`Hash.js`](./Hash.js): [Insert a hash into the output file name](#insert-a-hash-into-the-output-file-name)
+* [`CheckPackaged.js`](./CheckPackaged.js): [Check that all files have been packaged](#check-that-all-files-have-been-packaged)
+* [`CopyUnpackaged.js`](./CopyUnpackaged.js): [Copy unpackaged files](#copy-unpackaged-files)
 * [`TextReplace.js`](./TextReplace.js): [Replace text in files](#replace-text)
+* [`Map.js`](./Map.js): [Map](#map)
+
+JavaScript specific visitors:
+
+* [`JSMinify.js`](./JSMinify.js): [Minify JavaScript files](#minify-a-javascript-file)
+* [`CheckDependencies.js`](./CheckDependencies.js): [Check/add dependencies](#check-add-dependencies)
+* [`CheckGlobals.js`](./CheckGlobals.js): [Check global variables use](#check-global-variables-use)
+* [`JSStripBanner.js`](./JSStripBanner.js): [Remove comment banners in JavaScript files](#remove-js-banner)
+
+Aria Templates specific visitors:
+
+* [`ATCompileTemplates.js`](./ATCompileTemplates.js): [Compile Aria Templates templates](#compile-aria-templates-templates)
+* [`ATDependencies.js`](./ATDependencies.js): [Compute Aria Templates dependencies](#compute-aria-templates-dependencies)
+* [`ATRemoveDoc.js`](./ATRemoveDoc.js): [Remove Aria Templates documentation data](#remove-aria-templates-documentation-data)
+* [`ATUrlMap.js`](./ATUrlMap.js): [AT URL Map](#at-url-map)
+* [`ATNormalizeSkin.js`](./ATNormalizeSkin.js): [Normalize Aria Templates skin](#normalize-aria-templates-skin)
 
 
 
@@ -54,7 +60,7 @@ Then, most of visitors accept one or more patterns to filter files that they sho
 
 Visitors processing single files will not do anything with a file that doesn't match the specified pattern. If no pattern was given, the usual default one is chosen so that it takes into account all files (`*/**`), or all files that are relevant (for instance, for visitors processing JavaScript files, the default pattern will filter extension, keeping `.js` ones).
 
-Therefore, unless specified otherwise, the above applies for configuration objects.
+Therefore, __unless specified otherwise__, the above applies for configuration objects.
 
 
 
@@ -170,7 +176,7 @@ Called right before the content of a JavaScript file is going to be written.
 	* __in & out__
 	* The output file (partly) built from the input file.
 1. `toBeWritten`
-	* interface: `Object` with specific properties (see below)
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object) with specific properties (see below)
 	* __required__
 	* __in & out__
 	* An object containing the JavaScrip content to be written.
@@ -183,7 +189,7 @@ The `toBeWritten` object contains two properties:
 	* __in & out__
 	* The AST representing the JavaScript content of the file.
 * `options`
-	* interface: `Object`
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object)
 	* __required__
 	* __in & out__
 	* Output options.
@@ -251,121 +257,108 @@ Called to compute the dependencies of an input file. It should add the found dep
 
 
 
+
 ----
 
-Specific visitors
+General purpose specific visitors.
+
+__Unless specified otherwise__, the default value for files filters includes all files: `[**/*]`.
+
+----
 
 
 
 
 
-# Replace text
+# Import a source file
 
-* Name: `TextReplace`
+* Name: `ImportSourceFile`
+
+Adds a source file to the packaging, regarding the given configuration.
 
 ## Configuration
 
-### File filtering
-
-* `files`
-	* default: `['**/*']`
-	* A set of patterns to filter the files to be processed.
-
-### Replacement configuration
-
-* `replacements`
-	* interface: `Array` of `Object` (see below for details about the replacement object)
-	* default: `[]` (no replacement)
-	* A list of replacements to be done.
-
-The replacement object:
-
-* `find`
-	* interface: `String`
+* `sourceFile`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* __required__
-	* The pattern to find in the text and replace.
-* `replace`
-	* interface: `String`
+	* The path of the file to import.
+* `targetBaseLogicalPath`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* __required__
-	* The replacement text.
+	* The directory path to set for the input file (purely logical, not the actual one on the storage device).
 
 ## Implemented methods
 
-### `onWriteInputFile`
+### `onInit`
 
-Modifies the content of the given input file only if the latter's name matches the patterns given in configuration (property `files`; for that it uses the method `isMatch` of the input file).
+The given `sourceFile` path is resolved using standard Node.js module `path`'s `resolve` method.
 
-Then, the list of replacements is iterated over and used to replace the whole text content of the file.
+Then, a new `Source File` instance is created with given `targetBaseLogicalPath` as `logicalPath`, and added to the packaging.
 
-For details:
-
-* text content is get and set using respectively `getTextContent` and `setTextContent` on the input file
-* replacements are done using the native `replace` method of `String`
+The previous resolved path is used only for being able to actually load the content of the file: the built-in content provider `fileLoader` is set as the file's content provider and the latter's load path is set to the resolved path.
 
 
 
 
 
-# Map
+# Import source files
 
-* Name: `Map`
+* Name: `ImportSourceFiles`
 
-Creates a map of input/output files and writes it on the disk.
-
-The keys of the map are path to input files of the packaging, while values are their associated output file
+Adds source files to the packaging, regarding the given configuration.
 
 ## Configuration
 
 ### Files filtering
 
 * `sourceFiles`
+	* interface: as expected by the method [`grunt.file.expand`](http://gruntjs.com/api/grunt.file#grunt.file.expand)'s `patterns` parameter
 	* default: `['**/*']`
-	* Source files to take into account in the map.
-* `outputFiles`
-	* default: `['**/*']`
-	* Output files to take into account in the map.
+	* A set of patterns to filter the files to be imported.
 
-### Map file configuration
+### Import configuration
 
-* `mapFile`
-	* interface: `String`
-	* default: `'map.js'`
-	* The output name of the map file.
-* `mapFileEncoding`
-	* interface: `String`
-	* default: [`null`](http://devdocs.io/javascript/global_objects/null)
-	* The encoding of the map file.
-* `outputDirectory`
-	* interface: `String`
-	* default: [`null`](http://devdocs.io/javascript/global_objects/null) (uses the global directory instead)
-	* The output directory of the map file.
+* `sourceDirectory`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: `""` (empty)
+	* The directory from which to import the files.
+* `targetBaseLogicalPath`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: `""` (empty)
+	* The directory path to set for the input files (purely logical, not the actual one on the storage device).
 
 ## Implemented methods
 
-### `onAfterBuild`
+### `onInit`
+
+File are imported from the given `sourceDirectory` and filtered with the given `patterns`, using [`grunt.file.expand`](http://gruntjs.com/api/grunt.file#grunt.file.expand).
+
+Then, for each found file, a new `Source File` instance is created, with `targetBaseLogicalPath` as `logicalPath`, and added to the packaging. In order to remain able to load the content of the file, the built-in content provider `fileLoader` is set as their content provider, and their load path is configured through it.
 
 
 
 
 
-# Hash
+# Insert a hash into the output file name
+
+* Name: `Hash`
+
+Inserts a hash computed with given options from the output file's content into its file name, regarding the given pattern.
 
 ## Configuration
 
-### File filtering
+### Files filtering
 
-* `files`
-	* default: `['**/*']`
-	* A set of patterns to filter the files to be processed.
+* `files`: a set of patterns to filter the files to be processed.
 
 ### Hash configuration
 
 * `hash`
-	* interface: `String` or as expected by Node.js module [`crypto`](http://devdocs.io/node/crypto)
+	* interface: [`String`] or as expected by Node.js module [`crypto`](http://devdocs.io/node/crypto)(http://devdocs.io/javascript/global_objects/string)
 	* default: `md5`
 	* The hash method to use (see below for more information about the possible ones).
 * `pattern`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* default: `"[name]-[hash][extension]"`
 	* The new output file pattern (see below for more information about its format).
 
@@ -407,44 +400,155 @@ In both cases, the content of the file is given as is to compute the hash. This 
 
 
 
-# Remove JS Banner
+# Check that all files have been packaged
 
-* Name: `JSStripBanner`
+* Name: `CheckPackaged`
+
+Checks that no file present as source file of the packaging was left unprocessed.
 
 ## Configuration
 
 ### Files filtering
 
-* `files`
-	* default: `['**/*.js']` (all JavaScript files)
-	* A set of patterns to filter the files to be processed.
+* `files`: A set of patterns to filter the files to be checked.
 
-### Banners types
+## Implemented methods
 
-* `line`
-	* interface: `Boolean`
-	* default: falsy
-	* Whether single line comments should be removed as well.
-* `block`
-	* interface: `Boolean`
-	* default: falsy
-	* Whether all block comments should be removed unconditionally, or block comments with a specific syntax should be preserved.
+### `onAfterBuild`
+
+Will log an error with grunt ([`grunt.log.error`](http://gruntjs.com/api/grunt.log#grunt.log.error-grunt.verbose.error)) for each source file contained in the packaging, and which has no associated output file: that means it wasn't used at all even though it was configured to be part of the packaging.
+
+
+
+
+
+# Copy unpackaged files
+
+* Name: `CopyUnpackaged`
+
+Copy files present in the packaging but not used to build any output file.
+
+## Configuration
+
+### Files filtering
+
+* `files`: A set of patterns to filter the files to be copied.
+
+### Copy configuration
+
+* `builder`
+	* interface: a builder configuration
+	* default: `{type: 'Copy'}` (the builder `Copy` without specific configuration)
+	* The builder configuration used to retrieved a builder to use to copy the files.
+* `renameFunction`
+	* interface: `Function`
+	* default: the identity function (it returns its first given argument, as is)
+	* A function used to rename the copied file.
+
+## Implemented methods
+
+### `onReachingBuildEnd`
+
+Will copy all the source files that the packaging contains, which were not used already to build other files, and which match the given `files` pattern.
+
+The file content is copied using the builder retrieved/created from the given `builder` configuration.
+
+What the visitor does however is only to create new `Output File` instances, add them to the packaging, and configure each with the above mentioned builder. The name of the output files are taken from the names of the input files, possibly renamed using the given `renameFunction`.
+
+
+
+
+
+# Replace text
+
+* Name: `TextReplace`
+
+## Configuration
+
+### Files filtering
+
+* `files`: A set of patterns to filter the files to be processed.
+
+### Replacement configuration
+
+* `replacements`
+	* interface: [`Array`](http://devdocs.io/javascript/global_objects/array) of [`Object`](http://devdocs.io/javascript/global_objects/object) (see below for details about the replacement object)
+	* default: `[]` (no replacement)
+	* A list of replacements to be done.
+
+The replacement object:
+
+* `find`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* __required__
+	* The pattern to find in the text and replace.
+* `replace`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* __required__
+	* The replacement text.
 
 ## Implemented methods
 
 ### `onWriteInputFile`
 
-Removes from the content of the file what is considered as a banner; content is considered itself as JavaScript source code.
+Modifies the content of the given input file only if the latter's name matches the patterns given in configuration (property `files`; for that it uses the method `isMatch` of the input file).
 
-A banner is a piece of comment put on top of the file, before any actual source code.
+Then, the list of replacements is iterated over and used to replace the whole text content of the file.
 
-Here are the kind of comments removed, depending on the given configuration:
+For details:
 
-* `line` is truthy: `// ...` leading comments are removed
-* `block` is truthy: `/* ... */` leading comments are removed
-* `block` is falsy: `/* ... */` leading comments are removed, except those with an extra exclamation mark, like this: `/*! ... */`
+* text content is get and set using respectively `getTextContent` and `setTextContent` on the input file
+* replacements are done using the native `replace` method of [`String`](http://devdocs.io/javascript/global_objects/string)
 
-You can see that anyway one type of block comments will be removed.
+
+
+
+
+# Map
+
+* Name: `Map`
+
+Creates a map of input/output files and writes it on the disk.
+
+The keys of the map are path to input files of the packaging, while values are their associated output file
+
+## Configuration
+
+### Files filtering
+
+* `sourceFiles`: source files to take into account in the map.
+* `outputFiles`: output files to take into account in the map.
+
+### Map file configuration
+
+* `mapFile`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: `'map.js'`
+	* The output name of the map file.
+* `mapFileEncoding`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: [`null`](http://devdocs.io/javascript/global_objects/null)
+	* The encoding of the map file.
+* `outputDirectory`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: [`null`](http://devdocs.io/javascript/global_objects/null) (uses the global directory instead)
+	* The output directory of the map file.
+
+## Implemented methods
+
+### `onAfterBuild`
+
+
+
+
+
+----
+
+JavaScript specific visitors.
+
+__Unless specified otherwise__, the default value for files filters includes all JavaScript files: `[**/*.js]`.
+
+----
 
 
 
@@ -456,29 +560,23 @@ You can see that anyway one type of block comments will be removed.
 
 ### Files filtering
 
-* `files`
-	* default: `['**/*.js']` (all JavaScript files)
-	* A set of patterns to filter the files to be processed.
-* `outputFiles`
-	* default: `['**/*']`
-	* Output files to take into account.
-* `inputFiles`
-	* default: `['**/*']`
-	* Input files to take into account.
+* `files`: global filter
+* `outputFiles`: output files to take into account
+* `inputFiles`: input files to take into account
 
 ### Minification configuration
 
 * `skipJSConcatParts`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `true`
 	* If truthy, will not process input files part of an output file built with the built-in builder `JSConcat`. Useful since this doesn't make much sense to minify each single part, but rather the resulting output file as whole.
 * `compress`
 	* interface: if the value `false` is not given, as expected by `UglifyJS.Compressor`
-	* default: `undefined`, and if value is different from `false` but still falsy, an empty object `{}`
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined), and if value is different from `false` but still falsy, an empty object `{}`
 	* The UglifyJS compressor configuration, used to compress the AST.
 * `mangle`
 	* interface: if the value `false` is not given, as expected by UglifyJS AST method `mangle_names`
-	* default: `undefined`, and if value is different from `false` but still falsy, an empty object `{}`
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined), and if value is different from `false` but still falsy, an empty object `{}`
 	* The name mangling configuration.
 * `output`
 	* interface: as expected by the second argument of the `uglifyHelpers`'s `astToString` helper
@@ -524,134 +622,50 @@ If the `mangle` configuration is not `false`, its computed value is forwarded to
 
 
 
-# Import source files
+# Check/Add dependencies
 
-* Name: `ImportSourceFiles`
+* Name: `CheckDependencies`
 
-Adds source files to the packaging, regarding the given configuration.
-
-## Configuration
-
-### Files filtering
-
-* `sourceFiles`
-	* interface: as expected by the method [`grunt.file.expand`](http://gruntjs.com/api/grunt.file#grunt.file.expand)'s `patterns` parameter
-	* default: `['**/*']`
-	* A set of patterns to filter the files to be imported.
-
-### Import configuration
-
-* `sourceDirectory`
-	* interface: `String`
-	* default: `""` (empty)
-	* The directory from which to import the files.
-* `targetBaseLogicalPath`
-	* interface: `String`
-	* default: `""` (empty)
-	* The directory path to set for the input files (purely logical, not the actual one on the storage device).
-
-## Implemented methods
-
-### `onInit`
-
-File are imported from the given `sourceDirectory` and filtered with the given `patterns`, using [`grunt.file.expand`](http://gruntjs.com/api/grunt.file#grunt.file.expand).
-
-Then, for each found file, a new `Source File` instance is created, with `targetBaseLogicalPath` as `logicalPath`, and added to the packaging. In order to remain able to load the content of the file, the built-in content provider `fileLoader` is set as their content provider, and their load path is configured through it.
-
-
-
-# Import a source file
-
-* Name: `ImportSourceFile`
-
-Adds a source file to the packaging, regarding the given configuration.
-
-## Configuration
-
-* `sourceFile`
-	* interface: `String`
-	* __required__
-	* The path of the file to import.
-* `targetBaseLogicalPath`
-	* interface: `String`
-	* __required__
-	* The directory path to set for the input file (purely logical, not the actual one on the storage device).
-
-## Implemented methods
-
-### `onInit`
-
-The given `sourceFile` path is resolved using standard Node.js module `path`'s `resolve` method.
-
-Then, a new `Source File` instance is created with given `targetBaseLogicalPath` as `logicalPath`, and added to the packaging.
-
-The previous resolved path is used only for being able to actually load the content of the file: the built-in content provider `fileLoader` is set as the file's content provider and the latter's load path is set to the resolved path.
-
-
-
-
-
-# Copy an unpackaged file
-
-* Name: `CopyUnpackaged`
-
-Copy files present in the packaging but not used to build any output file.
+Check the dependencies on output files, and add corresponding missing source files to the packaging: they need to be part of the package in order to be used by the depending file.
 
 ## Configuration
 
 ### Files filtering
 
 * `files`
-	* interface: as expected by the prototype method `isMatch` of `Source File`
-	* default: `['**/*']`
-	* A set of patterns to filter the files to be copied.
 
-### Copy configuration
+### Dependencies check
 
-* `builder`
-	* interface: a builder configuration
-	* default: `{type: 'Copy'}` (the builder `Copy` without specific configuration)
-	* The builder configuration used to retrieved a builder to use to copy the files.
-* `renameFunction`
-	* interface: `Function`
-	* default: the identity function (it returns its first given argument, as is)
-	* A function used to rename the copied file.
+* `noCircularDependencies`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* Whether to allow [circular dependencies](https://en.wikipedia.org/wiki/Circular_dependency) or not.
+* `addUnpackagedDependencies`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* Whether to add missing dependencies instead of just checking for their presence.
+* `unpackagedDependenciesError`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* If unpackaged dependencies are not added (`addUnpackagedDependencies` is falsy), whether to log an error in case of missing dependency or not.
+
+### Ordering
+
+* `checkPackagesOrder`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* Whether dependencies should be included by the main build before or during the build of this output file. indeed, in some cases some will be included after, as dependencies of other output files.
+* `reorderFiles`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* Controls the order of source files contained by the output file: whether to keep the order in which source files have been encountered while processing dependencies, or to let the latter at the end of the list, as they were appended.
 
 
 ## Implemented methods
 
-### `onReachingBuildEnd`
+### `onBeforeOutputFileBuild`
 
-Will copy all the source files that the packaging contains, which were not used already to build other files, and which match the given `files` pattern.
-
-The file content is copied using the builder retrieved/created from the given `builder` configuration.
-
-What the visitor does however is only to create new `Output File` instances, add them to the packaging, and configure each with the above mentioned builder. The name of the output files are taken from the names of the input files, possibly renamed using the given `renameFunction`.
-
-
-
-
-
-# Check that all files have been packaged
-
-* Name: `CheckPackaged`
-
-Checks that no file present as source file of the packaging was left unprocessed.
-
-## Configuration
-
-### Files filtering
-
-* `files`
-	* interface: as expected by the prototype method `isMatch` of `Source File`
-	* default: `['**/*']`
-	* A set of patterns to filter the files to be checked.
-
-## Implemented methods
-
-### `onAfterBuild`
-
-Will log an error with grunt (`grunt.log.error`) for each source file contained in the packaging, and which has no associated output file: that means it wasn't used at all even though it was configured to be part of the packaging.
+Anytime a circular dependency is found, an error is logged (using [`grunt.log.error`](http://gruntjs.com/api/grunt.log#grunt.log.error-grunt.verbose.error)), specifying the list of concerned dependencies, and the current dependency processing is stopped.
 
 
 
@@ -661,18 +675,18 @@ Will log an error with grunt (`grunt.log.error`) for each source file contained 
 
 * Name: `CheckGlobals`
 
+Checks global variables use.
+
 ## Configuration
 
 ### Files filtering
 
 * `files`
-	* default: `['**/*.js']` (all JavaScript files)
-	* A set of patterns to filter the files to be processed.
 
 ### Globals configuration
 
 * `strict`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default:
 	* Whether to use strict checking or not. In strict mode, a global must be explicitly allowed to be considered as accepted, while otherwise it must only not be forbidden.
 
@@ -680,19 +694,19 @@ Globals permissions:
 
 1. `allowStdJSGlobals`
 	* interface: value `false` or anything else
-	* default: `undefined` (truthy in this context)
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined) (truthy in this context)
 	* Whether to allow standard JavaScript globals or not (see below for a list).
 1. `allowCommonJSGlobals`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: falsy
-	* Whether to allow global defined by CommonJS or not (see below for a list).
+	* Whether to allow global defined by [CommonJS](http://wiki.commonjs.org/wiki/CommonJS) or not (see below for a list).
 1. `allowedGlobals`
-	* interface: `Array` of `String`
-	* default: `undefined`
+	* interface: [`Array`](http://devdocs.io/javascript/global_objects/array) of [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined)
 	* If specified, the globals listed here are set as being allowed.
 1. `forbiddenGlobals`
-	* interface: `Array` of `String`
-	* default: `undefined`
+	* interface: [`Array`](http://devdocs.io/javascript/global_objects/array) of [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined)
 	* If specified, the globals listed here are set as being forbidden.
 
 The list above is ordered, since all these properties are processed in this order, with any of the possible override. So for instance listed forbidden globals have precedence over allowed one.
@@ -700,30 +714,30 @@ The list above is ordered, since all these properties are processed in this orde
 Now here are the lists of globals per category:
 
 * Standard (`allowStdJSGlobals`):
-	* `Math`
-	* `RegExp`
-	* `Array`
-	* `Date`
-	* `Number`
-	* `Function`
-	* `String`
-	* `Error`
-	* `Object`
-	* `parseInt`
-	* `parseFloat`
-	* `isNaN`
-	* `isFinite`
-	* `encodeURIComponent`
-	* `decodeURIComponent`
-	* `encodeURI`
-	* `decodeURI`
+	* [`Math`](http://devdocs.io/javascript/global_objects/math)
+	* [`RegExp`](http://devdocs.io/javascript/global_objects/regexp)
+	* [`Array`](http://devdocs.io/javascript/global_objects/array)
+	* [`Date`](http://devdocs.io/javascript/global_objects/date)
+	* [`Number`](http://devdocs.io/javascript/global_objects/number)
+	* [`Function`](http://devdocs.io/javascript/global_objects/function)
+	* [`String`](http://devdocs.io/javascript/global_objects/string)
+	* [`Error`](http://devdocs.io/javascript/global_objects/error)
+	* [`Object`](http://devdocs.io/javascript/global_objects/object)
+	* [`parseInt`](http://devdocs.io/javascript/global_objects/parseint)
+	* [`parseFloat`](http://devdocs.io/javascript/global_objects/parsefloat)
+	* [`isNaN`](http://devdocs.io/javascript/global_objects/isnan)
+	* [`isFinite`](http://devdocs.io/javascript/global_objects/isfinite)
+	* [`encodeURIComponent`](http://devdocs.io/javascript/global_objects/encodeuricomponent)
+	* [`decodeURIComponent`](http://devdocs.io/javascript/global_objects/decodeuricomponent)
+	* [`encodeURI`](http://devdocs.io/javascript/global_objects/encodeuri)
+	* [`decodeURI`](http://devdocs.io/javascript/global_objects/decodeuri)
 	* `escape`
 	* `unescape`
-	* `eval`
-	* `NaN`
-	* `undefined`
-	* `Infinity`
-* CommonJS (`allowCommonJSGlobals`):
+	* [`eval`](http://devdocs.io/javascript/global_objects/eval)
+	* [`NaN`](http://devdocs.io/javascript/global_objects/nan)
+	* [`undefined`](http://devdocs.io/javascript/global_objects/undefined)
+	* [`Infinity`](http://devdocs.io/javascript/global_objects/infinity)
+* [CommonJS](http://wiki.commonjs.org/wiki/CommonJS) (`allowCommonJSGlobals`):
 	* `module`
 	* `exports`
 	* `require`
@@ -736,16 +750,17 @@ Now here are the lists of globals per category:
 
 Will check all files matching the given pattern `file` for global variables use.
 
-Everytime a forbidden global is used in one of those files, an error will be logged using grunt (`grunt.log.error`), specifying which global was used and in which file.
+Everytime a forbidden global is used in one of those files, an error will be logged using grunt ([`grunt.log.error`](http://gruntjs.com/api/grunt.log#grunt.log.error-grunt.verbose.error)), specifying which global was used and in which file.
 
 
 
 
-# Check/Add dependencies
 
-* Name: `CheckDependencies`
+# Remove JS Banner
 
-Check the dependencies on output files, and add corresponding missing source files to the packaging: they need to be part of the package in order to be used by the depending file.
+* Name: `JSStripBanner`
+
+Removes from the content of the file what is considered as a banner; content is considered itself as JavaScript source code.
 
 ## Configuration
 
@@ -755,57 +770,103 @@ Check the dependencies on output files, and add corresponding missing source fil
 	* default: `['**/*.js']` (all JavaScript files)
 	* A set of patterns to filter the files to be processed.
 
-### Dependencies check
+### Banners types
 
-* `noCircularDependencies`
-	* interface: `Boolean`
-	* default: `true`
-	* Whether to allow [circular dependencies](https://en.wikipedia.org/wiki/Circular_dependency) or not.
-* `addUnpackagedDependencies`
-	* interface: `Boolean`
-	* default: `true`
-	* Whether to add missing dependencies instead of just checking for their presence.
-* `unpackagedDependenciesError`
-	* interface: `Boolean`
-	* default: `true`
-	* If unpackaged dependencies are not added (`addUnpackagedDependencies` is falsy), whether to log an error in case of missing dependency or not.
-
-### Ordering
-
-* `checkPackagesOrder`
-	* interface: `Boolean`
-	* default: `true`
-	* Whether dependencies should be included by the main build before or during the build of this output file. indeed, in some cases some will be included after, as dependencies of other output files.
-* `reorderFiles`
-	* interface: `Boolean`
-	* default: `true`
-	* Controls the order of source files contained by the output file: whether to keep the order in which source files have been encountered while processing dependencies, or to let the latter at the end of the list, as they were appended.
-
+* `line`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: falsy
+	* Whether single line comments should be removed as well.
+* `block`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: falsy
+	* Whether all block comments should be removed unconditionally, or block comments with a specific syntax should be preserved.
 
 ## Implemented methods
 
-### `onBeforeOutputFileBuild`
+### `onWriteInputFile`
 
-Anytime a circular dependency is found, an error is logged (using `grunt.log.error`), specifying the list of concerned dependencies, and the current dependency processing is stopped.
+A banner is a piece of comment put on top of the file, before any actual source code.
+
+Here are the kind of comments removed, depending on the given configuration:
+
+* `line` is truthy: `// ...` leading comments are removed
+* `block` is truthy: `/* ... */` leading comments are removed
+* `block` is falsy: `/* ... */` leading comments are removed, except those with an extra exclamation mark, like this: `/*! ... */`
+
+You can see that anyway one type of block comments will be removed.
 
 
 
 
 
-# AT URL Map
+----
 
-* Name: `ATUrlMap`
+Aria Templates specific visitors.
+
+__Unless specified otherwise__, the default value for files filters includes all files: `[**/*]`. In some cases some are specified with a filter to include JavaScript files. Indeed, Aria Templates is made of both JavaScript files and Template files, and the latter can even get compiled to JavaScript files too.
+
+----
+
+
+
+
+
+# Compile Aria Templates templates
+
+* Name: `ATCompileTemplates`
+
+Compiles Aria Templates templates.
 
 ## Configuration
 
 ### Files filtering
 
-* `sourceFiles`
-	* default: `['**/*']`
-	* Source files to take into account in the map.
-* `outputFiles`
-	* default: `['**/*']`
-	* Output files to take into account in the map.
+* `files`
+
+## Implemented methods
+
+### `onWriteInputFile`
+
+In addition to the given `files` filter, if the file does not correspond to an actual template (we determine it if we can't find an associated parser), the file won't be processed.
+
+It uses the content provider `ATCompiledTemplate` to compile the template and store the associated content, and also sets it as the default content provider of the file, so that this is the content that would be fetched.
+
+
+
+
+
+# Compute Aria Templates dependencies
+
+* Name: `ATDependencies`
+
+Computes the dependencies of the given input file, and adds them to the latter.
+
+## Configuration
+
+### Files filtering
+
+* `files`
+
+### Options
+
+* `mustExist`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* Whether to be strict or not when finding dependencies: if truthy, determined dependencies must be found in the packaging.
+* `externalDependencies`
+	* interface: [`Array`](http://devdocs.io/javascript/global_objects/array) of [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: `[]`
+	* List of paths of dependencies to consider as external, and therefore which do not have to be inside the packaging.
+
+## Implemented methods
+
+### `computeDependencies`
+
+Dependencies of the given input file are computed, and then actually specified as being dependencies of the file.
+
+Note that dependencies must be part of the packaging already, either already added to it or present in its source directory.
+
+If a dependency could not be found, is not part of the specified `externalDependencies` and if `mustExist` is truthy, an error is logged.
 
 
 
@@ -823,24 +884,23 @@ Removes documentation data, with impact on runtime and/or package's size.
 
 * `files`
 	* default: `['**/*.js']` (all JavaScript files)
-	* A set of patterns to filter the files to be processed.
 
 ### Elements to remove
 
 * `removeBeanDescription`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `true`
 	* Remove the description of properties in Bean definitions
 * `removeEventDescription`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `true`
 	* Remove the description of events in Aria object definitions
 * `removeErrorStrings`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `false`
 	* Remove the error strings. __See description for details__.
 * `replaceStaticsInErrors`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `false`
 	*  __See description for details__.
 
@@ -867,6 +927,21 @@ Errors strings are removed from:
 
 
 
+# AT URL Map
+
+* Name: `ATUrlMap`
+
+## Configuration
+
+### Files filtering
+
+* `sourceFiles`: source files to take into account in the map
+* `outputFiles`: output files to take into account in the map
+
+
+
+
+
 # Normalize Aria Templates skin
 
 * Name: `ATNormalizeSkin`
@@ -879,16 +954,15 @@ Normalizes Aria Templates skin definitions.
 
 * `files`
 	* default: `['**/*.js']` (all JavaScript files)
-	* A set of patterns to filter the files to be processed.
 
 ### Normalization options
 
 * `jsonIndent`
-	* interface: `String`
-	* default: `    ` (4 spaces)
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: _4 spaces_
 	* The indentation string to use.
 * `strict`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: falsy
 	* Whether to log actual error messages if there are errors, or to simply log warnings.
 
@@ -899,69 +973,3 @@ Normalizes Aria Templates skin definitions.
 First note that in addition to the given `files` filter, files who don't define an Aria class with a classpath corresponding to the skin (`aria.widgets.AriaSkin`) will be skipped as well.
 
 Then, it normalizes the skin definition using `aria.widgets.AriaSkinNormalization.normalizeSkin`, replacing the content of the file if done with success, logging an error otherwise.
-
-
-
-
-
-# Aria Templates dependencies
-
-* Name: `ATDependencies`
-
-Computes the dependencies of the given input file, and adds them to the latter.
-
-## Configuration
-
-### Files filtering
-
-* `files`
-	* default: `['**/*']`
-	* A set of patterns to filter the files to be processed.
-
-### Options
-
-* `mustExist`
-	* interface: `Boolean`
-	* default: `true`
-	* Whether to be strict or not when finding dependencies: if truthy, determined dependencies must be found in the packaging.
-* `externalDependencies`
-	* interface: `Array` of `String`
-	* default: `[]`
-	* List of paths of dependencies to consider as external, and therefore which do not have to be inside the packaging.
-
-## Implemented methods
-
-### `computeDependencies`
-
-Dependencies of the given input file are computed, and then actually specified as being dependencies of the file.
-
-Note that dependencies must be part of the packaging already, either already added to it or present in its source directory.
-
-If a dependency could not be found, is not part of the specified `externalDependencies` and if `mustExist` is truthy, an error is logged.
-
-
-
-
-
-# Compile Aria Templates templates
-
-* Name: `ATCompileTemplates`
-
-Compiles Aria Templates templates.
-
-## Configuration
-
-### Files filtering
-
-* `files`
-	* default: `['**/*']`
-	* A set of patterns to filter the files to be processed.
-
-## Implemented methods
-
-### `onWriteInputFile`
-
-In addition to the given `files` filter, if the file does not correspond to an actual template (we determine it if we can't find an associated parser), the file won't be processed.
-
-It uses the content provider `ATCompiledTemplate` to compile the template and store the associated content, and also sets it as the default content provider of the file, so that this is the content that would be fetched.
-

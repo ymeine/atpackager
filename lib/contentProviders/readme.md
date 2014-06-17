@@ -1,4 +1,4 @@
-Content providers.
+Built-in content providers.
 
 # File system layout
 
@@ -18,7 +18,7 @@ The content providers defined here are classes (technically the constructor func
 
 As its name stands, a content provider is something that is able to retrieve the content of a given object.
 
-In our case, content providers deal with Source File objects, and with binary and text content.
+In our case, content providers deal with `Source File` objects, and with binary and text content types.
 
 # Interface of a content provider
 
@@ -34,20 +34,20 @@ At least one of the two is required, but a content provider might implement both
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in & out__
-	* The source file used to retrieve the content: it can either describe how to do it, or directly contain this content.
+	* The source file used to retrieve the content: it can either have enough information to fetch the content from outside, or directly store this content as a property.
 
 #### Description
 
-The content can be retrieved by any technique. Some content providers might even assume that this content had already been fetched by another content provider, and then just retrieve the stored value.
+The content can be retrieved by any technique. Some content providers might even assume that this content had already been fetched (probably by another content provider), and then just get the stored value.
 
 The content provider might choose to store the content it retrieved directly into a property of the source file object. In that case, the name of the property must begin with the exact following text: `content`.
 
 #### Return value
 
-* interface: `String` for text content, Node.js `Buffer` for binary content
+* interface: [`String`](http://devdocs.io/javascript/global_objects/string) for text content, Node.js [`Buffer`](http://devdocs.io/node/buffer#buffer_class_buffer) for binary content
 
 The content of the input.
 
@@ -62,12 +62,12 @@ Those methods are fully optional. Also, a content provider might implement both.
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in & out__
 	* The source file used to apply the content: it can either describe how to do it, or directly receive this content.
 1. `textContent` for text content, `buffer` for binary content
-	* interface: `String` for text content, Node.js `Buffer` for binary content
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string) for text content, Node.js [`Buffer`](http://devdocs.io/node/buffer#buffer_class_buffer) for binary content
 	* __required__
 	* __in__
 	* The content to apply to the source file.
@@ -107,11 +107,11 @@ Implements:
 * `getTextContent`
 * `getBinaryContent`
 
-It uses `grunt.file` utility to read the content of the file from the storage interface. In the case of binary content, it is read as is, while in the case of text content the specified encoding is the one stored in `grunt.file.defaultEncoding` property.
+It uses [`grunt.file`](http://gruntjs.com/api/grunt.file) utility to read the content of the file from the storage interface. In the case of binary content, it is read as is, while in the case of text content the specified encoding is the one stored in [`grunt.file.defaultEncoding`](http://gruntjs.com/api/grunt.file#grunt.file.defaultencoding) property.
 
 In both cases, before the content is returned, it is stored in the given source file object, using either the binary content provider in case of binary content or the text content provider in case of text content.
 
-Note that the actual path used to read the content of the file is fetched by calling the prototype method `getLoadPath` (see below).
+Note that the actual path used to read the content of the file is fetched by calling the prototype method [`getLoadPath`](#get-the-load-path-of-a-source-file).
 
 ## Prototype methods
 
@@ -122,12 +122,12 @@ Stores the given load path into the given source file, for later use.
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in & out__
 	* The source file for which the load path is given.
 1. `path`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* __required__
 	* __in__
 	* The path to use to load the content of the given source file.
@@ -139,20 +139,20 @@ Returns the load path to be used for the given source file.
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in & out__
 	* The source file for which the load path is requested.
 
 #### Description
 
-If the load path was specified earlier (using prototype method `setLoadPath`), this value is directly returned (to be exact it is returned if it is truthy).
+If the load path was specified earlier (using prototype method [`setLoadPath`](#set-the-load-path-of-a-source-file)), this value is directly returned (to be exact it is returned if it is truthy).
 
 Otherwise, the path is computed using source file's associated packaging object, calling the latter's method `getAbsolutePath`, passing the value of the logical path of the source file. In short, in resolves the absolute path of the source file against the path of the packaging in which it is contained.
 
 #### Return value
 
-* interface: `String`
+* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 
 The load path of the source file, either previously stored or freshly computed.
 
@@ -170,11 +170,11 @@ Specific content providers.
 
 Implements:
 
-* `getTextContent`: gets the file's content set by prototype method `compile` (so it must be called before)
+* `getTextContent`: gets the file's content set by prototype method [`compile`](#compile-the-content-of-a-file) (so it must be called before)
 
 ## Content type
 
-This content provider stores its content in a property called `contentATCompiledTemplate`, as a `String`.
+This content provider stores its content in a property called `contentATCompiledTemplate`, as a [`String`](http://devdocs.io/javascript/global_objects/string).
 
 
 
@@ -190,17 +190,17 @@ This content provider stores its content in a property called `contentATCompiled
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in & out__
 	* The input file corresponding to the content to compile.
 1. `fileContent`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* default: gets content from given `inputFile` by calling its method `getTextContent`.
 	* __in__
 	* The content to compile.
 1. `logicalPath`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* default: defaults to the given `inputFile`'s `logicalPath`
 	* __in__
 	* The path of the file, overriding the one present in the latter if specified.
@@ -209,7 +209,7 @@ This content provider stores its content in a property called `contentATCompiled
 
 Compiles the given or retrieved text content - which should correspond to an Atlas template - into a JavaScript class.
 
-Since there are multiple types of templates, it must use the proper compiler for the given content. It uses the prototype method `getClassGeneratorFromLogicalPath` to retrieve the name of the proper compiler class.
+Since there are multiple types of templates, it must use the proper compiler for the given content. It uses the prototype method [`getClassGeneratorFromLogicalPath`](#get-the-name-of-the-class-generator-for-a-given-template) to retrieve the name of the proper compiler class.
 
 The result is stored as content (see content type).
 
@@ -224,7 +224,7 @@ Note that this method considers it has already been called before (or its job ha
 #### Parameters
 
 1. `logicalPath`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* __required__
 	* __in__
 	* The path of the file corresponding to the template to compile (the relevant part is actually the extension)
@@ -245,19 +245,19 @@ Here is the list of classpaths per extension:
 
 #### Return value
 
-* interface: `String`
+* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 
-Returns the classpath of the class to use to compile the template, or `null` if not found.
+Returns the classpath of the class to use to compile the template, or [`null`](http://devdocs.io/javascript/global_objects/null) if not found.
 
 
 
 ### Get the content
 
 * Name: `getCompiledTemplate`
-* Parameters: see prototype method `compile`
+* Parameters: see prototype method [`compile`](#compile-the-content-of-a-file)
 * Return value: see content type
 
-Returns the content of the file as the prototype method `getTextContent` would do, however if the latter doesn't exist yet it calls the prototype method `compile` to compute it (forwarding all arguments), before eventually returning it.
+Returns the content of the file as the prototype method `getTextContent` would do, however if the latter doesn't exist yet it calls the prototype method [`compile`](#compile-the-content-of-a-file) to compute it (forwarding all arguments), before eventually returning it.
 
 
 
@@ -267,7 +267,7 @@ Returns the content of the file as the prototype method `getTextContent` would d
 
 Implements:
 
-* `getTextContent`: gets the file's content set by prototype method `parse` (so it must be called before), and converts it to a string using the utility [astToString](../uglifyHelpers/astToString.js)
+* `getTextContent`: gets the file's content set by prototype method [`parse`](#parse-the-content-of-a-source-file) (so it must be called before), and converts it to a string using the utility [astToString](../uglifyHelpers/astToString.js)
 
 ## Content type
 
@@ -275,7 +275,7 @@ This content provider stores its content in a property called `contentUglifyJS`,
 
 * `ast`
 	* interface: UglifyJS AST
-	* default: `null`
+	* default: [`null`](http://devdocs.io/javascript/global_objects/null)
 	* AST corresponding to the text content of the source file to which this current content corresponds.
 * `outputOptions`
 	* interface: as expected by utility method [astToString](../uglifyHelpers/astToString.js)'s second parameter
@@ -296,25 +296,23 @@ This content provider stores its content in a property called `contentUglifyJS`,
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in & out__
 	* The input file corresponding to the content to parse.
 1. `fileContent`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* default: gets content from given `inputFile` by calling its method `getTextContent`.
 	* __in__
 	* The content to parse.
-1. `outputOptions`: see content type
-	* interface: see content type
-	* default: see content type
+1. `outputOptions`: __see content type documentation__
 	* __in__
 
 #### Description
 
 Parses the `fileContent` (either passed or retrieved) using UglifyJS, specifying `inputFile`'s logical path.
 
-If the parsing fails, the AST is set to `null` and an error is logged using grunt.
+If the parsing fails, the AST is set to [`null`](http://devdocs.io/javascript/global_objects/null) and an error is logged using grunt.
 
 The resulting AST and the final `outputOptions` are stored as content of the file (see content type).
 
@@ -347,17 +345,16 @@ The AST corresponding to the given content or given file's content.
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in & out__
 	* The input file to which the given AST corresponds.
 1. `ast`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* __required__
 	* __in__
 	* The AST corresponding to the content of file.
-1. `outputOptions`: see content type
-	* interface: see content type
+1. `outputOptions`: __see content type documentation__
 	* default: void
 	* __in__
 
@@ -381,7 +378,7 @@ Otherwise, this method overrides its properties with the given ones:
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in__
 	* The input file for which the output options are requested.
@@ -406,7 +403,7 @@ Note that the content object must exist!
 #### Parameters
 
 1. `inputFile`
-	* interface: Source File
+	* interface: `Source File`
 	* __required__
 	* __in__
 	* The input file receiving the given output options.

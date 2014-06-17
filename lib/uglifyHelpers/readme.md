@@ -36,7 +36,7 @@ After applying the given options, generates a string from the given UglisyJS AST
 	* __in & out__
 	* The AST to use to generate a string representation.
 1. `outputOptions`
-	* interface: `Object`, see [below](#description) for a list of available options
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object), see [below](#description) for a list of available options
 	* default: `{}`
 	* __in__
 	* The options to customize the output string.
@@ -46,14 +46,14 @@ After applying the given options, generates a string from the given UglisyJS AST
 Here are the possible options for `outputOptions`:
 
 * `comments`
-	* interface: `Boolean`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: falsy
 	* If truthy, removes the following properties (if they exist) from every node of the AST, before the serialization: `node.start._comments_dumped`, `node.end._comments_dumped`
 
 
 ## Return value
 
-* interface: `String`
+* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 
 The AST as a string.
 
@@ -110,7 +110,7 @@ The expression if found.
 
 ## Exceptions
 
-* type: `Error`
+* type: [`Error`](http://devdocs.io/javascript/global_objects/error)
 
 Thrown if the given node is not of one of the types described above.
 
@@ -126,24 +126,24 @@ Generates an AST from the given object, throwing an exception if it doesn't know
 
 * `object`
 	* type: one of the types listed in description
-	* default: `undefined`
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined)
 	* __in__
 	* The value from which to create the AST.
 
 ## Description
 
-The way to generate an AST depends on the object's type. The latter is checked using the empiric method of applying the native `Object`'s `toString` implementation on the object, so you can expect having an implementation for the following types:
+The way to generate an AST depends on the object's type. The latter is checked using the empiric method of applying the native [`Object`](http://devdocs.io/javascript/global_objects/object)'s `toString` implementation on the object, so you can expect having an implementation for the following types:
 
-* `Array`
-* `RegExp`
-* `Date`
-* `String`
-* `Number`
-* `Undefined`
-* `Boolean`
-* `Null`
-* `Object`
-* `Function`
+* [`Array`](http://devdocs.io/javascript/global_objects/array)
+* [`RegExp`](http://devdocs.io/javascript/global_objects/regexp)
+* [`Date`](http://devdocs.io/javascript/global_objects/date)
+* [`String`](http://devdocs.io/javascript/global_objects/string)
+* [`Number`](http://devdocs.io/javascript/global_objects/number)
+* [`Undefined`](http://devdocs.io/javascript/global_objects/undefined)
+* [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+* [`Null`](http://devdocs.io/javascript/global_objects/null)
+* [`Object`](http://devdocs.io/javascript/global_objects/object)
+* [`Function`](http://devdocs.io/javascript/global_objects/function)
 
 ## Return value
 
@@ -155,7 +155,7 @@ The actual type of AST returned by the method depends on both the type of the in
 
 ## Exceptions
 
-* type: `Error`
+* type: [`Error`](http://devdocs.io/javascript/global_objects/error)
 
 For any other type than the one listed above, an exception is thrown.
 
@@ -189,7 +189,7 @@ It handles both nodes stored directly as properties of the parent or in an array
 
 ## Exceptions
 
-* type: `Error`
+* type: [`Error`](http://devdocs.io/javascript/global_objects/error)
 
 Thrown if the given node cannot be found in given parent node.
 
@@ -207,13 +207,13 @@ Thrown if the given node cannot be found in given parent node.
 	* __in & out__
 	* The root node from which the property is accessed, directly or by traversing some sub-objects.
 1. `path`
-	* interface: `String` or `Array`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string) or [`Array`](http://devdocs.io/javascript/global_objects/array)
 	* __required__
 	* __in__
 	* The path of the property. It can be given as an array of path portions (a sequence of property names), or as a string containing those portions separated by a single dot `.`.
 1. `value`
 	* interface: can be anything
-	* default: `undefined`
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined)
 	* __in__
 	* The value to use to replace the property's one.
 
@@ -248,12 +248,12 @@ equivalent = {
 ## Parameters
 
 1. `wrapper`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* __required__
 	* __in__
 	* Source code used to wrap the given statements.
 1. `statements`
-	* interface: `Array` of `UglifyJS.AST_Node` (a single `UglifyJS.AST_Node` will automatically be wrapped in an array)
+	* interface: [`Array`](http://devdocs.io/javascript/global_objects/array) of `UglifyJS.AST_Node` (a single `UglifyJS.AST_Node` will automatically be wrapped in an array)
 	* __required__
 	* __in & out__
 	* ???
