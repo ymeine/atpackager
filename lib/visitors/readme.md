@@ -4,7 +4,7 @@ Built-in visitors.
 
 * [`readme.md`](./readme.md): this current documentation file
 
-Visitors:
+General purpose specific visitors:
 
 * [`ImportSourceFile.js`](./ImportSourceFile.js): [Import a source file](#import-source-files)
 * [`ImportSourceFiles.js`](./ImportSourceFiles.js): [Import a set of source files](#import-source-files)
@@ -48,11 +48,12 @@ It implements the concept of _events_:
 
 
 
+
 # Some concepts
 
 _Before going further into details, here are a few concepts to know, in order to understand some features, and also to avoid repeating things in the documentation, making it less digestible._
 
-All visitors expect a configuration object as the unique argument of their constructors; they are described in this documentation for each specific visitors. There are several things to say, at least __concerning built-in visitors__ (those described here).
+All visitors expect a configuration object as the unique argument of their constructors; they are described in this documentation for each specific visitor. There are several things to say about it, at least __concerning built-in visitors__ (those described here).
 
 First, the configuration object is not altered, its properties are simply used.
 
@@ -61,9 +62,6 @@ Then, most of visitors accept one or more patterns to filter files that they sho
 Visitors processing single files will not do anything with a file that doesn't match the specified pattern. If no pattern was given, the usual default one is chosen so that it takes into account all files (`*/**`), or all files that are relevant (for instance, for visitors processing JavaScript files, the default pattern will filter extension, keeping `.js` ones).
 
 Therefore, __unless specified otherwise__, the above applies for configuration objects.
-
-
-
 
 
 
@@ -89,6 +87,7 @@ Called when the packaging is initialized.
 	* interface: `Packaging`
 	* __required__
 	* __in & out__
+	* The packaging being initialized.
 
 
 

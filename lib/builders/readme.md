@@ -1,16 +1,25 @@
-Built-in visitors builders.
+Built-in builders.
 
 # File system layout
 
 * [`readme.md`](./readme.md): this current documentation file
 
-Builders:
+General purpose specific builders:
 
-* [`ATMultipart.js`](./ATMultipart.js)
-* [`Concat.js`](./Concat.js)
-* [`Copy.js`](./Copy.js):
-* [`JSConcat.js`](./JSConcat.js):
+* [`Concat.js`](./Concat.js): [Concatenate files](#concatenate-files)
+* [`Copy.js`](./Copy.js): [Copy files](#copy-files)
 
+JavaScript specific builders:
+
+* [`JSConcat.js`](./JSConcat.js): [Concatenate JavaScript files](#concatenate-javascript-files)
+
+Aria Templates specific builders:
+
+* [`ATMultipart.js`](./ATMultipart.js): [Create an Aria Templates multi-part file](#create-an-aria-templates-multi-part-file)
+
+
+
+----
 
 # Introduction: what is a builder?
 
@@ -18,30 +27,41 @@ A builder is in charge to create the content of an output file (normally using i
 
 
 
+
+
+# Some concepts
+
+_Before going further into details, here are a few concepts to know, in order to understand some features, and also to avoid repeating things in the documentation, making it less digestible._
+
+All builders expect a configuration object as the unique argument of their constructors; they are described in this documentation for each specific builder.
+
+Note that the configuration object is not altered, its properties are simply used.
+
+
+
+
+
 # Interface of a builder
 
-## Constructor
+## Methods
 
-### Parameters
 
-1. `cfg`
-	* interface: any, but usually an `Object`
-	* default: `undefined`
-	* A unique parameter to configure the builder.
-
-## Public methods
 
 ### Build
 
 * Name: `build`
 
-Main entry point of the builder to actually write the given output file.
+Main entry point of the builder to generate the content of the given output file.
 
-## Protected methods
+__All builders implement this method.__
 
-They can be reimplemented to change the behavior of the build method, which relies on them.
+#### Parameters
 
-### ...
+1. `outputFile`
+	* interface: `Output File`
+	* __required__
+	* __in & out__
+	* The output file to build.
 
 
 
@@ -49,69 +69,62 @@ They can be reimplemented to change the behavior of the build method, which reli
 
 ----
 
-Specific builders
+General purpose specific builders
+
+----
 
 
 
 
 
-# Concat
+# Concatenate files
 
 * Name: `Concat`
 
-This builder creates the output file by concatenating its input files together, adding an optional header at the beginning and a footer at the end.
+Creates the output content by concatenating its input files' contents together, optionally adding a header at the beginning and a footer at the end.
+
+
 
 ## Configuration
 
 * `outputEncoding`
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* default: `grunt.file.defaultEncoding`
 	* The encoding of the output file.
 * `header`
-	* interface: `String`
-	* _optional_
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined)
 	* The header to put at the beginning of the output file.
 * `footer`:
-	* interface: `String`
-	* _optional_
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined)
 	* The footer to put at the end of the file.
+
+
 
 ## Interfaces
 
-### Out [Frozen]
+### Out
 
 * Name: `Out`
 * Instances often referenced as `out`
+* Often called _output_, or _out stream_
 
 Out's interface is in fact the `Array`. It is just intended to be used to put together a sequence of lines that will be joined together to produce a whole content. Simply alter the array to alter this content. At that level, changes' granularity is the line.
 
-### File
 
-* Name: `File`
 
-A representation of a file in the context of atpackager.
+## Protected methods
 
-## Methods
+Those methods are used from the `build` method, and can be overridden to create a new builder based on this one.
 
-### Build
 
-* Name: `build`
-
-Main entry point of the builder to actually write the given output file.
-
-#### Input
-
-* `outputFile`:
-	* interface: `File`
-	* __required__
-	* The output file.
 
 ### Write header
 
 * Name: `writeHeader`
-* __Overridable__: used by the `build` method
 
-Writes the header at the beginning of the file.
+Writes the header content at the beginning of the output.
 
 #### Input
 
@@ -122,13 +135,14 @@ Writes the header at the beginning of the file.
 * `out`:
 	* interface: `Out`
 	* __required__
+
+
 
 ### Write footer
 
 * Name: `writeFooter`
-* __Overridable__: used by the `build` method
 
-Writes the footer at the end of the file.
+Writes the footer content at the end of the output.
 
 #### Input
 
@@ -140,21 +154,22 @@ Writes the footer at the end of the file.
 	* interface: `Out`
 	* __required__
 
+
+
 ### Write input file
 
 * Name: `writeInputFile`
-* __Overridable__: used by the `build` method
 
-Writes the given source file's content into the given out stream. Once done, the source file is cleared using `clearContent`.
+Writes the given source file's content into the given output. Once done, the source file is cleared using `clearContent`.
 
-#### Input
+#### Parameters
 
 * `outputFile`:
-	* interface: `File`
+	* interface: `Output File`
 	* __required__
 	* The output file.
 * `sourceFile`:
-	* interface: `File`
+	* interface: `Source File`
 	* __required__
 	* The source file.
 * `out`:
@@ -168,29 +183,30 @@ Writes the given source file's content into the given out stream. Once done, the
 * Arguments:
 	* 0: `[outputFile, sourceFile]`
 
+
+
 ### Write output file
 
 * Name: `writeOutputFile`
-* __Overridable__: used by the `build` method
 
-Writes the content of the output file.
+Actually writes the content of the output file on the disk.
 
-Uses `grunt.file.write`.
+Uses [`grunt.file.write`](http://gruntjs.com/api/grunt.file#grunt.file.write).
 
 #### Input
 
 * `outputFile`:
-	* interface: `File`
+	* interface: `Output File`
 	* __required__
-	* The output file.
+	* The output file (used for its description).
 * `content`:
-	* interface: `String`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* __required__
 	* The content to write into the given output file.
 * `options`:
-	* interface: `Object`
-	* __required__?
-	* Options passed directly to the underlying write method (see description).
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object)
+	* __required__
+	* Options passed directly to the underlying write method.
 
 #### Visitors
 
@@ -198,9 +214,15 @@ Uses `grunt.file.write`.
 * Moment: right before the actual write operation is called
 * Arguments:
 	* 0: `[outputFile, {content: content, options: options}]`
+* It can be used to alter the content to be written and/or the output options
 
 
 
+
+
+# Copy files
+
+* Name: `Copy`
 
 
 
