@@ -1,6 +1,6 @@
 # Recap
 
-AT Packager is built as a Grunt plugin and therefore expects it configuration to be passed using [`grunt.initConfig`](http://gruntjs.com/api/grunt.config#grunt.config.init) in the `Gruntfile.js` file.
+atpackager is built as a Grunt plugin and therefore expects it configuration to be passed using [`grunt.initConfig`](http://gruntjs.com/api/grunt.config#grunt.config.init) in the `Gruntfile.js` file.
 
 Here is an example of such a file:
 
@@ -31,13 +31,13 @@ module.exports = function (grunt) {
 };
 ```
 
-The rest of this documentation mainly discusses the actual configuration of AT Packager, that is the `options` object you can see in the snippet of code.
+The rest of this documentation mainly discusses the actual configuration of atpackager, that is the `options` object you can see in the snippet of code.
 
 
 
 
 
-# General configuration not specific to AT Packager
+# General configuration not specific to atpackager
 
 ## Set the base directory of the project
 
@@ -49,7 +49,7 @@ grunt.file.setBase("...");
 
 Replace `...` with the actual path to the root of the project.
 
-## Load AT Packager tasks
+## Load atpackager tasks
 
 ```javascript
 grunt.loadTasks(".../atpackager/tasks");
@@ -60,15 +60,15 @@ Replace `...` with the actual path to the `atpackager` module.
 
 
 
-# AT Packager specific configuration
+# atpackager specific configuration
 
-Note that since it is a Grunt plugin, AT Packager uses a lot of the latter's features. Notably regarding paths for files and folders specifications: [globs](https://github.com/isaacs/node-glob) are accepted.
+Note that since it is a Grunt plugin, atpackager uses a lot of the latter's features. Notably regarding paths for files and folders specifications: [globs](https://github.com/isaacs/node-glob) are accepted.
 
 Note also the following terms and concepts used in this article:
 
 * a _packaging_ is what is built by the packager from the configuration object
 * the _packager_ is what builds the packaging
-* a _package_ is the equivalent of an output file: a packaging is made of a set of them, as mentioned in [introduction](./user.html#the-at-packager-design)
+* a _package_ is a configuration from which a single output file is built: a packaging is made of a set of them, as mentioned in [introduction](./get-started.html#the-at-packager-design)
 * a _logical path_ is a path relative to the packaging (which can have several roots!)
 
 ## Options
@@ -130,9 +130,28 @@ Please see the [dedicated section about visitors](./visitors.html) to learn more
 
 ### Aria Templates specific
 
-___TO BE DONE___
+#### Use a custom bootstrap file
 
-`ATBootstrapFile`
+The `ATBootstrapFile` option expects the path of a custom bootstrap file to be used to load Aria Templates. This path can be relative to the `sourceDirectories` configured for the packaging.
+
+Having such a custom bootstrap file can be necessary in the case of pre-compilation of Atlas templates containing widgets. Thus, it is possible to configure the widget libraries using `aria.core.AppEnvironment.setEnvironment` before pre-compiling templates.
+
+This bootstrap file should first call the normal Aria Templates bootstrap file and then sets the environment, as shown in the example below:
+
+```javascript
+// Loading the normal Aria Templates bootstrap file:
+load('aria/aria-templates.js');
+
+// Setting the environment for template pre-compilation:
+aria.core.AppEnvironment.setEnvironment({
+	defaultWidgetLibs : {
+		"aria": "aria.widgets.AriaLib",
+		"embed": "aria.embed.EmbedLib",
+		"html": "aria.html.HtmlLibrary"
+	}
+});
+```
+
 
 
 
@@ -140,20 +159,22 @@ ___TO BE DONE___
 
 Built-in objects all follow the same principle:
 
-* they have a name: in practice it corresponds to the source file name
-* they are located in a specific folder depending on their types (the folder is named after that)
-* they optionally take a configuration object
+* they have a __name__: in practice it corresponds to the source file name
+* they are __located in a specific folder__ depending on their types (the folder is named after that)
+* they __optionally take a configuration object__
 
 Thus, there are two ways to specify the use of one of those objects:
 
-* the short form: a simple string with the name of the specific object to be used. The packager will know its type and where to look for it depending on the context where it is used.
-* the long form, whose name is put under a property `type` and whose configuration is put under a property `cfg`.
+* __the short form__: a simple string with the name of the specific object to be used.
+* __the long form__, whose name is put under a property `type` and whose configuration is put under a property `cfg`.
+
+In both cases the packager will know the type of the object and where to look for it depending on the context where it is used.
 
 Example:
 
 ```javascript
 {
-	visitors: [
+	visitors: [ // objects inside will all be of type "visitor"
 		{
 			type: "...", // The name of the object
 			cfg: { // The configuration of object
@@ -168,12 +189,12 @@ Example:
 
 ## Package definition
 
-A package is a single file resulting from a building process applied on a set of input files.
+A package is a single output file resulting from a building process applied on a set of input files.
 
 Therefore a package definition is made of the following properties:
 
 * `name`: the name of the resulting file
-* `builder`: the [builder](#builders) configuration to use to create the output file from the input files. If not specified, the `defaultBuilder` specified in global AT Packager's configuration will be used.
+* `builder`: the [builder](#builders) configuration to use to create the output file from the input files. If not specified, the `defaultBuilder` specified in global atpackager's configuration will be used.
 * `files`: the list of input files to be processed by the `builder` to create the output file with given `name`
 
 Note that this list of input `files` will possibly be extended by some specific visitors if needed.

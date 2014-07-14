@@ -1,3 +1,12 @@
+<!-- TODO
+
+Missing descriptions:
+
+- AT URL Map (complete)
+- Check/Add dependencies
+
+-->
+
 Built-in visitors.
 
 # File system layout
@@ -6,13 +15,13 @@ Built-in visitors.
 
 General purpose specific visitors:
 
-* [`ImportSourceFile.js`](./ImportSourceFile.js): [Import a source file](#import-source-files)
+* [`ImportSourceFile.js`](./ImportSourceFile.js): [Import a source file](#import-a-source-file)
 * [`ImportSourceFiles.js`](./ImportSourceFiles.js): [Import a set of source files](#import-source-files)
 * [`Hash.js`](./Hash.js): [Insert a hash into the output file name](#insert-a-hash-into-the-output-file-name)
 * [`CheckPackaged.js`](./CheckPackaged.js): [Check that all files have been packaged](#check-that-all-files-have-been-packaged)
 * [`CopyUnpackaged.js`](./CopyUnpackaged.js): [Copy unpackaged files](#copy-unpackaged-files)
 * [`TextReplace.js`](./TextReplace.js): [Replace text in files](#replace-text)
-* [`Map.js`](./Map.js): [Map](#map)
+* [`Map.js`](./Map.js): [Build a map of input files to output files](#build-a-map-of-input-files-to-output-files)
 
 JavaScript specific visitors:
 
@@ -23,7 +32,7 @@ JavaScript specific visitors:
 
 Aria Templates specific visitors:
 
-* [`ATCompileTemplates.js`](./ATCompileTemplates.js): [Compile Aria Templates templates](#compile-aria-templates-templates)
+* [`ATCompileTemplates.js`](./ATCompileTemplates.js): [Compile Atlas templates](#compile-atlas-templates)
 * [`ATDependencies.js`](./ATDependencies.js): [Compute Aria Templates dependencies](#compute-aria-templates-dependencies)
 * [`ATRemoveDoc.js`](./ATRemoveDoc.js): [Remove Aria Templates documentation data](#remove-aria-templates-documentation-data)
 * [`ATUrlMap.js`](./ATUrlMap.js): [AT URL Map](#at-url-map)
@@ -37,11 +46,11 @@ Aria Templates specific visitors:
 
 A visitor is a kind of hook, which implements some specific methods.
 
-Visitors can be instantiated with a specific configuration, and then added to a packaging. Afterwards, the packaging will call the specific methods on all its visitors at different steps of its process.
+Visitors can be instantiated with a custom configuration, and then added to a packaging. Afterwards, the packaging will call the specific methods on all its visitors at different steps of its process.
 
 It implements the concept of _events_:
 
-* events names are implemented methods' names
+* events names are equivalent to the implemented methods' names
 * adding a visitor is like registering to an event, with implemented methods indicating which events are subscribed
 * calling all visitors with a specific method is like emitting the corresponding event
 
@@ -57,9 +66,9 @@ All visitors expect a configuration object as the unique argument of their const
 
 First, the configuration object is not altered, its properties are simply used.
 
-Then, most of visitors accept one or more patterns to filter files that they should process. This uses the concept of glob patterns, which are used with the method `isMatch` of `Source File` or `Ouput File` (depending on the actual type of received file), which anyway works the same in both cases.
+Then, most visitors accepts one or more patterns to filter files that they should process. This uses the concept of glob patterns, which are used with the method `isMatch` of `Source File` or `Ouput File` (depending on the actual type of received file), which anyway works the same in both cases.
 
-Visitors processing single files will not do anything with a file that doesn't match the specified pattern. If no pattern was given, the usual default one is chosen so that it takes into account all files (`*/**`), or all files that are relevant (for instance, for visitors processing JavaScript files, the default pattern will filter extension, keeping `.js` ones).
+Visitors processing single files will not do anything with a file that doesn't match the specified pattern. If no pattern was given, the usual default one is chosen so that it takes into account all files (`*/**`), or all files that are relevant (for instance, for visitors processing JavaScript files, the default pattern will filter regarding extensions, keeping `.js` ones).
 
 Therefore, __unless specified otherwise__, the above applies for configuration objects.
 
@@ -69,10 +78,45 @@ Therefore, __unless specified otherwise__, the above applies for configuration o
 
 # Interface of a visitor
 
-Note: visitor methods don't have significant return value, this doesn't really make sense since the caller doesn't know which visitors are going to be actually called, how many, etc.
+Note: visitor methods don't have significant return value, this doesn't really make sense since the caller doesn't know which visitors are going to be actually called, how many, etc. However, and this is one of the main purposes of visitors, arguments values can be altered (that's why they are mostly shared objects).
+
+Each method corresponds to a specific event during the whole packaging build process. Before describing them, below are a quick overview of the schedules of these events. The first one is the exact which cannot change (built-in the core process of atpackager), whereas the second one considers common practices of visitors. This is because visitors can perform operations with events when reacting to some events, and starting from that, it can be hard to know the actual sequence of events.
+
+Exact schedule:
+
+1. `onInit`
+1. `onBeforeBuild`, `onReachingBuildEnd`
+	1. `onBeforeOutputFileBuild`
+		1. `onWriteInputFile`
+		1. `onWriteOutputFile`, `onWriteJSOutputFile`
+	1. `onAfterOutputFileBuild`
+1. `onAfterBuild`
+
+Variable: `onAddSourceFile`, `onAddOutputFile`, `computeDependencies`.
+
+Common schedule:
+
+1. `onInit`
+1. `onAddSourceFile`, `onAddOutputFile`: at the loading of the configuration, and anytime a visitor adds a new file (more likely to be during `onInit` for `onAddSourceFile`, and `onReachingBuildEnd` for `onAddOutputFile`)
+1. `onBeforeBuild`, `onReachingBuildEnd`: hooks the build process at whole packaging level. `onReachingBuildEnd` can be called multiple times in between.
+	1. `computeDependencies`: called for each output file making the packaging
+	1. `onBeforeOutputFileBuild`: hooks the build process at output file level, called for each output file making the packaging
+		1. `onWriteInputFile`: called for each input file making the output file
+		1. `onWriteOutputFile`, `onWriteJSOutputFile`: called once for the output file
+	1. `onAfterOutputFileBuild`
+1. `onAfterBuild`
+
+
 
 ## Methods
 
+Before describing each method specifically, here are their common properties.
+
+All methods receive __as their first parameter an instance of the packaging__ currently processed (there should be only one per invocation of atpackager).
+
+All the other parameters are considered to be required, and to be used both an input and output, the main purpose being to alter those objects.
+
+Everything that is not explicitly stated otherwise applies the above statements.
 
 
 ### On initialization of the packaging
@@ -81,135 +125,41 @@ Note: visitor methods don't have significant return value, this doesn't really m
 
 Called when the packaging is initialized.
 
-#### Parameters
-
-1. `packaging`
-	* interface: `Packaging`
-	* __required__
-	* __in & out__
-	* The packaging being initialized.
 
 
+### On source file addition
 
-### Before writing an input file
+* Name: `onAddSourceFile`
 
-* Name: `onWriteInputFile`
-
-Called just before an input file is written.
-
-You can use it to alter its content before it is written.
+Called when a source file has just been added.
 
 #### Parameters
 
-1. `packaging`
-	* interface: `Packaging`
-	* __required__
-	* __in & out__
-	* The packaging containing the input file.
 1. `outputFile`
-	* interface: `Output File`
-	* __required__
-	* __in & out__
-	* The output file (partly) built from the input file.
-1. `inputFile`
 	* interface: `Source File`
-	* __required__
-	* __in & out__
-	* The input file about to be written.
+	* The source file added.
 
 
 
-### After the build of the packaging has finished
+### On output file addition
 
-* Name:  `onAfterBuild`
+* Name: `onAddOutputFile`
 
-Called right after the `build` method of the packaging has finished.
+Called when an output file has just been added.
 
 #### Parameters
 
-1. `packaging`
-	* interface: `Packaging`
-	* __required__
-	* __in & out__
-	* The packaging for which the build is finished.
-
-
-
-### After an output file has been built
-
-* Name: `onAfterOutputFileBuild`
-
-Called right after the content of an output file has been built.
-
-#### Parameters
-
-1. `packaging`
-	* interface: `Packaging`
-	* __required__
-	* __in & out__
-	* The packaging containing the output file.
 1. `outputFile`
 	* interface: `Output File`
-	* __required__
-	* __in & out__
-	* The output file which has just been built.
+	* The output file added.
 
 
 
-### Before writing a JavaScript output file
+### Before the packaging is built
 
-* Name: `onWriteJSOutputFile`
+* Name: `onBeforeBuild`
 
-Called right before the content of a JavaScript file is going to be written.
-
-#### Parameters
-
-1. `packaging`
-	* interface: `Packaging`
-	* __required__
-	* __in & out__
-	* The packaging containing the input file.
-1. `outputFile`
-	* interface: `Output File`
-	* __required__
-	* __in & out__
-	* The output file (partly) built from the input file.
-1. `toBeWritten`
-	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object) with specific properties (see below)
-	* __required__
-	* __in & out__
-	* An object containing the JavaScrip content to be written.
-
-The `toBeWritten` object contains two properties:
-
-* `content`
-	* interface: UglifyJS AST
-	* __required__
-	* __in & out__
-	* The AST representing the JavaScript content of the file.
-* `options`
-	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object)
-	* __required__
-	* __in & out__
-	* Output options.
-
-
-### When reaching the end of the build
-
-* Name: `onReachingBuildEnd`
-
-Called when the build of the packaging doesn't have anymore file to build.
-
-It's about to be finished, but this hook is the occasion to add new files to be processed.
-
-#### Parameters
-
-1. `packaging`
-	* interface: `Packaging`
-	* __required__
-	* __in & out__
-	* The packaging being built.
-
+Called right before the packaging is going to be built.
 
 
 
@@ -217,19 +167,12 @@ It's about to be finished, but this hook is the occasion to add new files to be 
 
 * Name: `onBeforeOutputFileBuild`
 
-Called just before an output file is going to be built.
+Called right before an output file is going to be built.
 
 #### Parameters
 
-1. `packaging`
-	* interface: `Packaging`
-	* __required__
-	* __in & out__
-	* The packaging containing the output file.
 1. `outputFile`
 	* interface: `Output File`
-	* __required__
-	* __in & out__
 	* The output file about to be built.
 
 
@@ -242,16 +185,114 @@ Called to compute the dependencies of an input file. It should add the found dep
 
 #### Parameters
 
-1. `packaging`
-	* interface: `Packaging`
-	* __required__
-	* __in & out__
-	* The packaging containing the input file.
 1. `inputFile`
 	* interface: `Source File`
-	* __required__
-	* __in & out__
 	* The input file to process.
+
+
+
+### Before writing an input file
+
+* Name: `onWriteInputFile`
+
+Called right before an input file is written.
+
+You can use it to alter its content before it is written.
+
+#### Parameters
+
+1. `outputFile`
+	* interface: `Output File`
+	* The output file (partly) built from the input file.
+1. `inputFile`
+	* interface: `Source File`
+	* The input file about to be written.
+
+
+
+### Before writing an output file
+
+* Name: `onWriteOutputFile`
+
+Called right before an output file is written.
+
+You can use it to alter its content before it is written.
+
+#### Parameters
+
+1. `outputFile`
+	* interface: `Output File`
+	* The output file.
+1. `toBeWritten`
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object) with specific properties (see below)
+	* An object containing the content to be written.
+
+The `toBeWritten` object contains two properties:
+
+* `content`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* The content to be written.
+* `options`
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object)
+	* Output options.
+
+
+
+### Before writing a JavaScript output file
+
+* Name: `onWriteJSOutputFile`
+
+Called right before a JavaScript file is written.
+
+#### Parameters
+
+1. `outputFile`
+	* interface: `Output File`
+	* The output file.
+1. `toBeWritten`
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object) with specific properties (see below)
+	* An object containing the JavaScript content to be written.
+
+The `toBeWritten` object contains two properties:
+
+* `content`
+	* interface: UglifyJS AST
+	* The AST representing the JavaScript content of the file.
+* `options`
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object)
+	* Output options.
+
+
+
+### After an output file has been built
+
+* Name: `onAfterOutputFileBuild`
+
+Called right after the content of an output file has been built.
+
+#### Parameters
+
+1. `outputFile`
+	* interface: `Output File`
+	* The output file which has just been built.
+
+
+
+### When reaching the end of the build of the packaging
+
+* Name: `onReachingBuildEnd`
+
+Called when the build of the packaging doesn't have anymore output file to build.
+
+It's about to be finished, but this hook is the occasion to add new files to be processed, which would have as effect to postpone the end of the build.
+
+
+
+### After the build of the packaging has finished
+
+* Name:  `onAfterBuild`
+
+Called right after the build of the packaging has finished.
 
 
 
@@ -290,7 +331,7 @@ Adds a source file to the packaging, regarding the given configuration.
 
 ### `onInit`
 
-The given `sourceFile` path is resolved using standard Node.js module `path`'s `resolve` method.
+The given `sourceFile` path is resolved using standard Node.js module `path`'s [`resolve`](http://devdocs.io/node/path#path_path_resolve_from_to) method.
 
 Then, a new `Source File` instance is created with given `targetBaseLogicalPath` as `logicalPath`, and added to the packaging.
 
@@ -308,19 +349,14 @@ Adds source files to the packaging, regarding the given configuration.
 
 ## Configuration
 
-### Files filtering
-
-* `sourceFiles`
-	* interface: as expected by the method [`grunt.file.expand`](http://gruntjs.com/api/grunt.file#grunt.file.expand)'s `patterns` parameter
-	* default: `['**/*']`
-	* A set of patterns to filter the files to be imported.
-
-### Import configuration
-
 * `sourceDirectory`
 	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* default: `""` (empty)
 	* The directory from which to import the files.
+* `sourceFiles`
+	* interface: as expected by the method [`grunt.file.expand`](http://gruntjs.com/api/grunt.file#grunt.file.expand)'s `patterns` parameter
+	* default: `['**/*']`
+	* A set of patterns to filter the files to be imported.
 * `targetBaseLogicalPath`
 	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
 	* default: `""` (empty)
@@ -342,19 +378,19 @@ Then, for each found file, a new `Source File` instance is created, with `target
 
 * Name: `Hash`
 
-Inserts a hash computed with given options from the output file's content into its file name, regarding the given pattern.
+Inserts a hash into an output file's name, regarding the given pattern. The hash is computed with given options from the output file's content.
 
 ## Configuration
 
 ### Files filtering
 
-* `files`: a set of patterns to filter the files to be processed.
+* `files`
 
 ### Hash configuration
 
 * `hash`
-	* interface: [`String`] or as expected by Node.js module [`crypto`](http://devdocs.io/node/crypto)(http://devdocs.io/javascript/global_objects/string)
-	* default: `md5`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string) or as expected by Node.js module [`crypto`](http://devdocs.io/node/crypto)
+	* default: `"md5"`
 	* The hash method to use (see below for more information about the possible ones).
 * `pattern`
 	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
@@ -409,7 +445,7 @@ Checks that no file present as source file of the packaging was left unprocessed
 
 ### Files filtering
 
-* `files`: A set of patterns to filter the files to be checked.
+* `files`
 
 ## Implemented methods
 
@@ -431,16 +467,16 @@ Copy files present in the packaging but not used to build any output file.
 
 ### Files filtering
 
-* `files`: A set of patterns to filter the files to be copied.
+* `files`
 
 ### Copy configuration
 
 * `builder`
 	* interface: a builder configuration
 	* default: `{type: 'Copy'}` (the builder `Copy` without specific configuration)
-	* The builder configuration used to retrieved a builder to use to copy the files.
+	* The builder configuration used to retrieve a builder to use to copy the files.
 * `renameFunction`
-	* interface: `Function`
+	* interface: [`Function`](http://devdocs.io/javascript/global_objects/function)
 	* default: the identity function (it returns its first given argument, as is)
 	* A function used to rename the copied file.
 
@@ -448,7 +484,7 @@ Copy files present in the packaging but not used to build any output file.
 
 ### `onReachingBuildEnd`
 
-Will copy all the source files that the packaging contains, which were not used already to build other files, and which match the given `files` pattern.
+Will copy all the source files that the packaging contains, which were not used already to build other files.
 
 The file content is copied using the builder retrieved/created from the given `builder` configuration.
 
@@ -462,11 +498,13 @@ What the visitor does however is only to create new `Output File` instances, add
 
 * Name: `TextReplace`
 
+Modifies the content of the given input file by applying the given replacements.
+
 ## Configuration
 
 ### Files filtering
 
-* `files`: A set of patterns to filter the files to be processed.
+* `files`
 
 ### Replacement configuration
 
@@ -490,26 +528,21 @@ The replacement object:
 
 ### `onWriteInputFile`
 
-Modifies the content of the given input file only if the latter's name matches the patterns given in configuration (property `files`; for that it uses the method `isMatch` of the input file).
+Text content is get and set using respectively `getTextContent` and `setTextContent` on the input file.
 
-Then, the list of replacements is iterated over and used to replace the whole text content of the file.
-
-For details:
-
-* text content is get and set using respectively `getTextContent` and `setTextContent` on the input file
-* replacements are done using the native `replace` method of [`String`](http://devdocs.io/javascript/global_objects/string)
+Replacements are done using the native [`replace`](http://devdocs.io/javascript/global_objects/string/replace) method of [`String`](http://devdocs.io/javascript/global_objects/string), passing `find` as first arguments and `replace` as second.
 
 
 
 
 
-# Map
+# Build a map of input files to output files
 
 * Name: `Map`
 
 Creates a map of input/output files and writes it on the disk.
 
-The keys of the map are path to input files of the packaging, while values are their associated output file
+The keys of the map are paths to input files of the packaging, while values are paths to their associated output file.
 
 ## Configuration
 
@@ -526,17 +559,30 @@ The keys of the map are path to input files of the packaging, while values are t
 	* The output name of the map file.
 * `mapFileEncoding`
 	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
-	* default: [`null`](http://devdocs.io/javascript/global_objects/null)
+	* default: [`null`](http://devdocs.io/javascript/global_objects/null) (uses [`grunt.file.defaultEncoding`](http://gruntjs.com/api/grunt.file#grunt.file.defaultencoding) instead)
 	* The encoding of the map file.
 * `outputDirectory`
 	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
-	* default: [`null`](http://devdocs.io/javascript/global_objects/null) (uses the global directory instead)
+	* default: [`null`](http://devdocs.io/javascript/global_objects/null) (uses the packaging's directory instead)
 	* The output directory of the map file.
 
 ## Implemented methods
 
 ### `onAfterBuild`
 
+A source file is not necessarily included in the map, it needs to satisfy the following conditions:
+
+* is is associated to an `outputFile`
+* its path matches given `sourceFiles` pattern
+* its associated `outputFile`'s path matches given `outputFiles` pattern
+
+If the file is actually included, it is then added to the map. The paths used to make to key/value pair are normalized
+
+The normalization of the paths ensures that the separator used is the slash (`/`) character. It uses [`path.normalize`](http://devdocs.io/node/path#path_path_normalize_p) behind.
+
+Finally, it serializes the built map using standard [`JSON.stringify`](http://devdocs.io/javascript/global_objects/json/stringify) method without any further argument.
+
+The resulting string is output to a file whose path is built from the joining of the `outputDirectory` and the `mapFile` file name.
 
 
 
@@ -554,6 +600,8 @@ __Unless specified otherwise__, the default value for files filters includes all
 
 
 # Minify a JavaScript file
+
+* Name: `JSMinify`
 
 ## Configuration
 
@@ -613,7 +661,7 @@ To compress the AST, two things are used:
 
 Both are used only if a corresponding configuration object has been created (please refer to the visitor configuration documentation for more details).
 
-If the `compressor` configuration is not `false`, its computed value is forwarded to the constructor `UglifyJS.Compressor` to be build a new compressor object, and then used to compress the AST.
+If the `compressor` configuration is not `false`, its computed value is forwarded to the constructor `UglifyJS.Compressor` to build a new compressor object, and then used to compress the AST.
 
 If the `mangle` configuration is not `false`, its computed value is forwarded to the method `mangle_names` of the AST object in order to mangle the names.
 
@@ -686,8 +734,8 @@ Checks global variables use.
 
 * `strict`
 	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
-	* default:
-	* Whether to use strict checking or not. In strict mode, a global must be explicitly allowed to be considered as accepted, while otherwise it must only not be forbidden.
+	* default: [`undefined`](http://devdocs.io/javascript/global_objects/undefined), which resolves to `true` in this case
+	* Whether to use strict checking or not (the value is strictly compared to `false` to get a boolean). In strict mode, a global must be explicitly allowed to be considered as accepted, while otherwise it must only not be forbidden.
 
 Globals permissions:
 
@@ -710,7 +758,7 @@ Globals permissions:
 
 The list above is ordered, since all these properties are processed in this order, with any of the possible override. So for instance listed forbidden globals have precedence over allowed one.
 
-Now here are the lists of globals per category:
+Here are the lists of globals per category:
 
 * Standard (`allowStdJSGlobals`):
 	* [`Math`](http://devdocs.io/javascript/global_objects/math)
@@ -747,8 +795,6 @@ Now here are the lists of globals per category:
 
 ### `onWriteInputFile`
 
-Will check all files matching the given pattern `file` for global variables use.
-
 Everytime a forbidden global is used in one of those files, an error will be logged using grunt ([`grunt.log.error`](http://gruntjs.com/api/grunt.log#grunt.log.error-grunt.verbose.error)), specifying which global was used and in which file.
 
 
@@ -766,8 +812,6 @@ Removes from the content of the file what is considered as a banner; content is 
 ### Files filtering
 
 * `files`
-	* default: `['**/*.js']` (all JavaScript files)
-	* A set of patterns to filter the files to be processed.
 
 ### Banners types
 
@@ -810,11 +854,11 @@ __Unless specified otherwise__, the default value for files filters includes all
 
 
 
-# Compile Aria Templates templates
+# Compile Atlas templates
 
 * Name: `ATCompileTemplates`
 
-Compiles Aria Templates templates.
+Compiles Atlas templates.
 
 ## Configuration
 
@@ -865,7 +909,7 @@ Dependencies of the given input file are computed, and then actually specified a
 
 Note that dependencies must be part of the packaging already, either already added to it or present in its source directory.
 
-If a dependency could not be found, is not part of the specified `externalDependencies` and if `mustExist` is truthy, an error is logged.
+If a dependency could not be found, is not part of the specified `externalDependencies` and if `mustExist` is truthy, an error is logged then.
 
 
 
@@ -875,7 +919,7 @@ If a dependency could not be found, is not part of the specified `externalDepend
 
 * Name: `ATRemoveDoc`
 
-Removes documentation data, with impact on runtime and/or package's size.
+Removes chose documentation data, with impact on runtime and/or package's size.
 
 ## Configuration
 
@@ -905,7 +949,7 @@ Removes documentation data, with impact on runtime and/or package's size.
 
 ## Implemented methods
 
-### `onWriteInputFile
+### `onWriteInputFile`
 
 Removes the selected documentation content from the given input file.
 
@@ -936,6 +980,128 @@ Errors strings are removed from:
 
 * `sourceFiles`: source files to take into account in the map
 * `outputFiles`: output files to take into account in the map
+
+* onlyATMultipart: only output files built with ATMultiPart
+
+### Map file specifications
+
+Output:
+
+* mapFile: file name
+* mapFileEncoding: file encoding
+
+Compression:
+
+* starCompress: "*": package
+* starStarCompress: "**": package
+* minifyJS: JSON stringify with or without indentation
+* jsonIndent: indent to use for serialization (irrelevant when minifying is on)
+
+
+
+
+## Implemented methods
+
+### `onAfterBuild`
+
+Builds a map of classpaths to output files.
+
+An example of such a map should be easier to understand:
+
+```json
+{
+	"<module1Name>": {
+		"<module2Name>": {
+			"<className>": "<outputFileName>"
+		}
+	}
+}
+```
+
+The classpath is built from the logical path of the input file, considering each part of the file as a module, which all get nested, the class name being the name of the file without its extension.
+
+The output file name is the normalized logical path of the output file associated to the input file.
+
+## Internal methods
+
+### `_starCompress`
+
+__Goal:__ avoid too much entries mapping to the same package (output file). For a given module path, the package with the highest number of entries is taken, to replace all the entries mapping to it with a single one names `"*"` (star).
+
+Indeed, given the name of an input file, if the lookup of the name in the map of the associated module doesn't return anything, it means it falls back to the big group `*`. Of course, there can be only one fallback like this, hence the reason of taking the package with the highest number of input files.
+
+__Details below__
+
+Recursive function.
+
+Let's take an example of a termination of this recursion, with the map above:
+
+* `path`: "<module1Name>/<module2Name>"
+* `map`: {"<className>": "<outputFileName>"}
+
+Computed values are, for one iteration:
+
+* `file`: "<className>"
+* `value`: "<outputFileName>"
+
+After all the iterations finished, this gives a `filesPerPackage` map like this:
+
+```json
+{
+	"<outputFileName>": [
+		"<className>"
+	]
+}
+```
+
+And a package with the highest number of files `packageWithMaxFiles`: `"<outputFileName>"`.
+
+Nothing is done if `path` doesn't match the given filter `starCompress`.
+
+If there is a package with max files, the entries mapping to this package are removed, keeping a single one named `"*"` (star), mapping to the corresponding package.
+
+### `_starStarCompress`
+
+```json
+{
+	"<module1Name>": {
+		"<module2Name>": {
+			"*": "<outputFileName>"
+			"<module3Name>": {
+				"*": "<outputFile2Name>"
+			}
+		}
+	}
+}
+```
+
+Depth-first.
+
+First step:
+
+```json
+{
+	"<module1Name>": {
+		"<module2Name>": {
+			"*": "<outputFileName>"
+			"<module3Name>": {
+				"**": "<outputFile2Name>"
+			}
+		}
+	}
+}
+```
+
+Second step:
+
+filesPerPackage = {
+	"<outputFileName>": [
+		"*"
+	],
+	"<outputFile2Name>": [
+		"<module3Name>"
+	]
+}
 
 
 
@@ -969,6 +1135,6 @@ Normalizes Aria Templates skin definitions.
 
 ### `onWriteInputFile`
 
-First note that in addition to the given `files` filter, files who don't define an Aria class with a classpath corresponding to the skin (`aria.widgets.AriaSkin`) will be skipped as well.
+First note that in addition to the given `files` filter, files who don't define an Aria class with a classpath corresponding to the skin ([`aria.widgets.AriaSkin`](http://ariatemplates.com/aria/guide/apps/apidocs/#aria.widgets.AriaSkin)) will be skipped as well.
 
-Then, it normalizes the skin definition using `aria.widgets.AriaSkinNormalization.normalizeSkin`, replacing the content of the file if done with success, logging an error otherwise.
+Then, it normalizes the skin definition using [`aria.widgets.AriaSkinNormalization.normalizeSkin`](http://ariatemplates.com/aria/guide/apps/apidocs/#aria.widgets.AriaSkinNormalization:normalizeSkin:method), replacing the content of the file if done with success, logging an error otherwise.
