@@ -9,6 +9,8 @@ Missing descriptions:
 
 Built-in visitors.
 
+
+
 # File system layout
 
 * [`readme.md`](./readme.md): this current documentation file
@@ -41,6 +43,8 @@ Aria Templates specific visitors:
 
 
 ----
+
+
 
 # Introduction: what is a visitor?
 

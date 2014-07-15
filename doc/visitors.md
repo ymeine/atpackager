@@ -10,13 +10,15 @@ It implements the concept of _events_:
 
 All visitors can potentially expect a configuration object.
 
-__Important__
+__Important__:
 
 Most visitors accepts one or more patterns to filter files that they should process. This uses the concept of [glob patterns](http://gruntjs.com/api/grunt.file#globbing-patterns).
 
 Visitors processing single files will not do anything with a file that doesn't match the specified pattern. If no pattern was given, the usual default one is chosen so that it takes into account all files (`*/**`), or all files that are relevant (for instance, for visitors processing JavaScript files, the default pattern will filter regarding extensions, keeping `.js` ones).
 
 Therefore, __unless specified otherwise__, the above applies for configuration objects.
+
+
 
 # Events/visitors' methods
 
@@ -33,6 +35,8 @@ Common schedule:
 	1. `onWriteOutputFile` (right before an output file is written), `onWriteJSOutputFile` (right before a JavaScript file is written)
 	1. `onAfterOutputFileBuild` (right after the content of an output file has been built)
 1. `onAfterBuild` (right after the build of the packaging has finished)
+
+
 
 # Built-in visitors
 
