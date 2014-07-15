@@ -37,7 +37,7 @@ Aria Templates specific visitors:
 * [`ATCompileTemplates.js`](./ATCompileTemplates.js): [Compile Atlas templates](#compile-atlas-templates)
 * [`ATDependencies.js`](./ATDependencies.js): [Compute Aria Templates dependencies](#compute-aria-templates-dependencies)
 * [`ATRemoveDoc.js`](./ATRemoveDoc.js): [Remove Aria Templates documentation data](#remove-aria-templates-documentation-data)
-* [`ATUrlMap.js`](./ATUrlMap.js): [AT URL Map](#at-url-map)
+* [`ATUrlMap.js`](./ATUrlMap.js): [Build an Aria Templates URL Map](#build-an-aria-templates-url-map)
 * [`ATNormalizeSkin.js`](./ATNormalizeSkin.js): [Normalize Aria Templates skin](#normalize-aria-templates-skin)
 
 
@@ -677,7 +677,7 @@ If the `mangle` configuration is not `false`, its computed value is forwarded to
 
 * Name: `CheckDependencies`
 
-Check the dependencies on output files, and add corresponding missing source files to the packaging: they need to be part of the package in order to be used by the depending file.
+Checks/adds the dependencies of all the source files of an output file. __This is necessary to have dependencies actually fetched__ (by the use of visitors implementing `computeDependencies`).
 
 ## Configuration
 
@@ -694,29 +694,44 @@ Check the dependencies on output files, and add corresponding missing source fil
 * `addUnpackagedDependencies`
 	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `true`
-	* Whether to add missing dependencies instead of just checking for their presence.
+	* Whether to add missing dependencies or not.
 * `unpackagedDependenciesError`
 	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `true`
-	* If unpackaged dependencies are not added (`addUnpackagedDependencies` is falsy), whether to log an error in case of missing dependency or not.
+	* If unpackaged dependencies are not added (`addUnpackagedDependencies` is falsy), whether to log an error with grunt in case of unpackaged dependencies or not.
 
 ### Ordering
 
 * `checkPackagesOrder`
 	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `true`
-	* Whether dependencies should be included by the main build before or during the build of this output file. indeed, in some cases some will be included after, as dependencies of other output files.
+	* Whether dependencies should be forced to be included by the output file or one that has been built before - in other words to avoid it to be packaged __after__  - or not. Indeed, in some cases some will be included after, as dependencies of other output files.
 * `reorderFiles`
 	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
 	* default: `true`
 	* Controls the order of source files contained by the output file: whether to keep the order in which source files have been encountered while processing dependencies, or to let the latter at the end of the list, as they were appended.
 
-
 ## Implemented methods
 
 ### `onBeforeOutputFileBuild`
 
-Anytime a circular dependency is found, an error is logged (using [`grunt.log.error`](http://gruntjs.com/api/grunt.log#grunt.log.error-grunt.verbose.error)), specifying the list of concerned dependencies, and the current dependency processing is stopped.
+For each source file making this output file, the dependencies are processed. See section below to know about the dependencies processing of a single file.
+
+Once all dependencies have been processed, likely adding source files to the output file, the work is over. However, is `reorderFiles` is truthy, the list of source files is put in the order in which dependencies have been encountered during the whole process.
+
+#### Single dependency processing
+
+The dependencies processing is recursive, which means that as long as a file has dependencies, its dependencies will be looked for other dependencies.
+
+During this lookup, circular dependencies are checked: any file that depends on a file which has already been processed is considered to have a circular dependency on the latter. If `noCircularDependencies` is truthy, anytime a circular dependency is found an error is logged using [`grunt.log.error`](http://gruntjs.com/api/grunt.log#grunt.log.error-grunt.verbose.error) specifying the list of concerned dependencies, and the current dependency processing is stopped.
+
+Already processed files are skipped to avoid useless computations.
+
+If a currently processed dependency is already associated to __another__ package __which has not yet been built__ and `checkPackagesOrder` is truthy, an error message will be logged using [`grunt.log.error`](http://gruntjs.com/api/grunt.log#grunt.log.error-grunt.verbose.error) to tell that a dependency file will be packaged after, and the current dependency processing is stopped.
+
+If the currently processed dependency is not part of any package yet but `addUnpackagedDependencies` is falsy, the current dependency processing is stopped. Additionally, if `unpackagedDependenciesError` is truthy, and error is logged using [`grunt.log.error`](http://gruntjs.com/api/grunt.log#grunt.log.error-grunt.verbose.error) specifying the unpackaged dependency.
+
+Finally, if everything went fine, the dependency is added to the package if it wasn't part of any other.
 
 
 
@@ -974,9 +989,11 @@ Errors strings are removed from:
 
 
 
-# AT URL Map
+# Build an Aria Templates URL Map
 
 * Name: `ATUrlMap`
+
+Builds a [URL map](http://ariatemplates.com/usermanual/latest/url_handling), and exports it into an executable piece of JavaScript code, directly using the [`aria.core.DownloadMgr.updateUrlMap`](http://ariatemplates.com/aria/guide/apps/apidocs/#aria.core.DownloadMgr:updateUrlMap:method) method with this map.
 
 ## Configuration
 
@@ -984,128 +1001,148 @@ Errors strings are removed from:
 
 * `sourceFiles`: source files to take into account in the map
 * `outputFiles`: output files to take into account in the map
-
-* onlyATMultipart: only output files built with ATMultiPart
+* `onlyATMultipart`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* If `true`, only takes into account output files built with the `ATMultipart` builder.
 
 ### Map file specifications
 
 Output:
 
-* mapFile: file name
-* mapFileEncoding: file encoding
+* `mapFile`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: `"map.js"`
+	* Name of the file into which the map should be output.
+* `mapFileEncoding`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: [`null`](http://devdocs.io/javascript/global_objects/null) (uses [`grunt.file.defaultEncoding`](http://gruntjs.com/api/grunt.file#grunt.file.defaultencoding) instead)
+	* The encoding of the file to which the map is output.
+* `outputDirectory`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: [`null`](http://devdocs.io/javascript/global_objects/null) (uses the packaging's directory instead)
+	* The directory of the map file.
+* `append`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* If `true`, appends to the resolved map file if it exists, otherwise always creates a new one.
 
 Compression:
 
-* starCompress: "*": package
-* starStarCompress: "**": package
-* minifyJS: JSON stringify with or without indentation
-* jsonIndent: indent to use for serialization (irrelevant when minifying is on)
-
-
+* `starCompress`
+	* interface: _glob pattern_
+	* default: `["**/*"]` (all files)
+	* Filters for files accepting to be star compressed (see full description for more about this concept).
+* `starStarCompress`
+	* interface: _glob pattern_
+	* default: `["**/*"]` (all files)
+	* Filters for files accepting to be star-star compressed (see full description for more about this concept).
+* `minifyJS`
+	* interface: [`Boolean`](http://devdocs.io/javascript/global_objects/boolean)
+	* default: `true`
+	* If `true`, the generated code will be minified using `UglifyJS.minify` and the given/processed `minifyJSOptions`. Moreover.
+* `minifyJSOptions`
+	* interface: [`Object`](http://devdocs.io/javascript/global_objects/object) with specific properties (see below)
+	* default: `{}`
+	* The processed options will always have at least the following properties: `{fromString: true}`.
+* `jsonIndent`
+	* interface: [`String`](http://devdocs.io/javascript/global_objects/string)
+	* default: _4 spaces_
+	* The indentation string to use when serializing the map using [`JSON.stringify`](http://devdocs.io/javascript/global_objects/json/stringify). It is not relevant (unused) when `minifyJS` is `true`.
 
 
 ## Implemented methods
 
 ### `onAfterBuild`
 
-Builds a map of classpaths to output files.
+For quick recap, an Aria Templates URL map maps classpaths to the actual file in which it is stored. Indeed, it allows to override the default behavior where one classpath corresponds exactly to one file path.
 
-An example of such a map should be easier to understand:
+Example of such a map:
 
 ```json
 {
-	"<module1Name>": {
-		"<module2Name>": {
-			"<className>": "<outputFileName>"
+	"A": {
+		"B": {
+			"X": "XY.js",
+			"Y": "XY.js",
+			"Z": "Z.js"
 		}
 	}
 }
 ```
 
-The classpath is built from the logical path of the input file, considering each part of the file as a module, which all get nested, the class name being the name of the file without its extension.
+(note that the output files names are always normalized and forced to use forward slashes).
 
-The output file name is the normalized logical path of the output file associated to the input file.
+Now, here is the process.
 
-## Internal methods
+The source files contained in the packaging are iterated over.
 
-### `_starCompress`
+A given source file is added to the map only if it matches the following criteria:
 
-__Goal:__ avoid too much entries mapping to the same package (output file). For a given module path, the package with the highest number of entries is taken, to replace all the entries mapping to it with a single one names `"*"` (star).
+1. it has an associated output file
+1. `onlyATMultipart` is `false` or the file is used by the `ATMultipart` builder to build its associated output file
+1. it matches the given `sourceFiles` pattern
+1. its associated output file matches the given `outputFiles` pattern
+1. its associated output file's path is not equal to the given `mapFile` path (normalized)
 
-Indeed, given the name of an input file, if the lookup of the name in the map of the associated module doesn't return anything, it means it falls back to the big group `*`. Of course, there can be only one fallback like this, hence the reason of taking the package with the highest number of input files.
+Once the map is built, if the given option `starCompress` is truthy, the star compression is applied, and afterwards star-star compression is applied if `starStarCompress` is truthy. See sections below for more information about these concepts.
 
-__Details below__
+Then, the map is serialized, and the piece of code is generated, generating a call to `aria.core.DownloadMgr.updateUrlMap` giving the previously serialized map as unique argument.
 
-Recursive function.
+If `JSMinify` is truthy, the resulting piece of code is minified using `UglifyJS.minify`.
 
-Let's take an example of a termination of this recursion, with the map above:
+Then, the piece of code is output to the file corresponding to the joining of the `outputDirectory` path and the `mapFile`. If the file already exists, it is overwritten if `append` is falsy, otherwise the code is appended. If the file doesn't exist yet, it is created with the piece of code as content. Note that `mapFileEncoding` is used anyway, whether the file existed or not.
 
-* `path`: "<module1Name>/<module2Name>"
-* `map`: {"<className>": "<outputFileName>"}
+#### Star compression
 
-Computed values are, for one iteration:
+The goal of the map is to find the output file corresponding to a given classpath.
 
-* `file`: "<className>"
-* `value`: "<outputFileName>"
+If we take the example above, we can see that `A.B.Z` will resolve to `Z.js`, but both `A.B.X` and `A.B.Y` will resolve to `XY.js`.
 
-After all the iterations finished, this gives a `filesPerPackage` map like this:
+The star compression takes in a given module a group of classes mapped to the same output file, and removes all those mappings to replace them with a single generic one named `*`. This becomes a fallback when the class is not explicitly mapped.
 
-```json
-{
-	"<outputFileName>": [
-		"<className>"
-	]
-}
-```
-
-And a package with the highest number of files `packageWithMaxFiles`: `"<outputFileName>"`.
-
-Nothing is done if `path` doesn't match the given filter `starCompress`.
-
-If there is a package with max files, the entries mapping to this package are removed, keeping a single one named `"*"` (star), mapping to the corresponding package.
-
-### `_starStarCompress`
+With our previous example, this would give:
 
 ```json
 {
-	"<module1Name>": {
-		"<module2Name>": {
-			"*": "<outputFileName>"
-			"<module3Name>": {
-				"*": "<outputFile2Name>"
-			}
+	"A": {
+		"B": {
+			"*": "XY.js",
+			"Z": "Z.js"
 		}
 	}
 }
 ```
 
-Depth-first.
+For best efficiency, the highest numbers of mappings will be removed, which means the star fallback will map to the output file with the highest number of classes.
 
-First step:
+__Note that to avoid a base classpath to be compressed - which means to receive a _star_ fallback - you can use the filter `starCompress`.__
+
+#### Star-star compression
+
+The goal of star-star compression is the same: to gain some spaces in the map be grouping some entries.
+
+The difference here is that it spans across several hierarchy of modules. Given another example:
 
 ```json
 {
-	"<module1Name>": {
-		"<module2Name>": {
-			"*": "<outputFileName>"
-			"<module3Name>": {
-				"**": "<outputFile2Name>"
-			}
+	"A": {
+		"B": {
+			"*": "P.js"
 		}
 	}
 }
 ```
 
-Second step:
+this would give:
 
-filesPerPackage = {
-	"<outputFileName>": [
-		"*"
-	],
-	"<outputFile2Name>": [
-		"<module3Name>"
-	]
+```json
+{
+	"**": "P.js"
 }
+```
+
+__Note that to avoid a base classpath to be compressed - which means to receive a _star-star_ fallback - you can use the filter `starStarCompress`.__
 
 
 
